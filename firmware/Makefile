@@ -136,6 +136,12 @@ fw-shipped-$(CONFIG_USB_VICAM) += vicam/firmware.fw
 fw-shipped-$(CONFIG_VIDEO_CPIA2) += cpia2/stv0672_vp4.bin
 fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
 
+ifdef CONFIG_IMX_SDMA
+fw-shipped-$(CONFIG_SOC_IMX50) += imx/sdma/sdma-imx50.bin
+fw-shipped-$(CONFIG_SOC_IMX51) += imx/sdma/sdma-imx51.bin
+fw-shipped-$(CONFIG_SOC_IMX53) += imx/sdma/sdma-imx53.bin
+endif
+
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
 quiet_cmd_ihex  = IHEX    $@
