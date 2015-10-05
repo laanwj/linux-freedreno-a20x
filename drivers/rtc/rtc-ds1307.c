@@ -37,6 +37,7 @@ enum ds_type {
 	ds_1338,
 	ds_1339,
 	ds_1340,
+	ds_1341,
 	ds_1388,
 	ds_3231,
 	m41t0,
@@ -80,8 +81,9 @@ enum ds_type {
 #	define DS1307_BIT_RS0		0x01
 #define DS1337_REG_CONTROL	0x0e
 #	define DS1337_BIT_nEOSC		0x80
-#	define DS1339_BIT_BBSQI		0x20
 #	define DS3231_BIT_BBSQW		0x40 /* same as BBSQI */
+#	define DS1339_BIT_BBSQI		0x20
+#	define DS1341_BIT_EGFIL		0x20
 #	define DS1337_BIT_RS2		0x10
 #	define DS1337_BIT_RS1		0x08
 #	define DS1337_BIT_INTCN		0x04
@@ -97,6 +99,8 @@ enum ds_type {
 #define DS1337_REG_STATUS	0x0f
 #	define DS1337_BIT_OSF		0x80
 #	define DS3231_BIT_EN32KHZ	0x08
+#	define DS1341_BIT_DOSF		0x40
+#	define DS1341_BIT_ECLK		0x04
 #	define DS1337_BIT_A2I		0x02
 #	define DS1337_BIT_A1I		0x01
 #define DS1339_REG_ALARM1_SECS	0x07
@@ -184,6 +188,7 @@ static const struct i2c_device_id ds1307_id[] = {
 	{ "ds1339", ds_1339 },
 	{ "ds1388", ds_1388 },
 	{ "ds1340", ds_1340 },
+	{ "ds1341", ds_1341 },
 	{ "ds3231", ds_3231 },
 	{ "m41t0", m41t0 },
 	{ "m41t00", m41t00 },
@@ -559,6 +564,8 @@ static int ds1307_set_time(struct device *dev, struct rtc_time *t)
 	case ds_3231:
 		if (t->tm_year > 199)
 			buf[DS1307_REG_MONTH] |= DS1337_BIT_CENTURY;
+	case ds_1341:
+		buf[DS1307_REG_MONTH] |= DS1337_BIT_CENTURY;
 		break;
 	case ds_1340:
 		buf[DS1307_REG_HOUR] |= DS1340_BIT_CENTURY_EN;
@@ -1571,6 +1578,17 @@ static int ds1307_probe(struct i2c_client *client,
 			irq_handler = mcp794xx_irq;
 			want_irq = true;
 		}
+		break;
+	case ds_1341: /* low power settings */
+		tmp = i2c_smbus_read_byte_data(client, DS1337_REG_CONTROL );
+		tmp |= DS1337_BIT_INTCN;
+		tmp &= ~DS1341_BIT_EGFIL;
+		i2c_smbus_write_byte_data(client, DS1337_REG_CONTROL, tmp);
+
+		tmp = i2c_smbus_read_byte_data(client, DS1337_REG_STATUS);
+		tmp |= DS1341_BIT_DOSF;
+		tmp &= ~DS1341_BIT_ECLK;
+		i2c_smbus_write_byte_data(client, DS1337_REG_STATUS, tmp);
 		break;
 	default:
 		break;
