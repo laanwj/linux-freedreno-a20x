@@ -181,6 +181,11 @@
 #define PORT_ASSOC_VECTOR_REFRESH_LOCKED	BIT(11)
 #define PORT_ATU_CONTROL	0x0c
 #define PORT_PRI_OVERRIDE	0x0d
+#define PORT_PRI_OVERRIDE_TRAP_TCAM_MISS	BIT(4)
+#define PORT_PRI_OVERRIDE_TCAM_MASK		(0x3 << 0)
+#define PORT_PRI_OVERRIDE_TCAM_DISABLED		(0x0 << 0)
+#define PORT_PRI_OVERRIDE_TCAM_48_BYTES		(0x1 << 0)
+#define PORT_PRI_OVERRIDE_TCAM_96_BYTES		(0x2 << 0)
 #define PORT_ETH_TYPE		0x0f
 #define PORT_ETH_TYPE_DEFAULT	0x9100
 #define PORT_IN_DISCARD_LO	0x10
@@ -861,6 +866,10 @@ struct mv88e6xxx_ops {
 	 */
 	int (*port_set_upstream_port)(struct mv88e6xxx_chip *chip, int port,
 				      int upstream_port);
+
+	/* TCAM operations */
+	int (*port_enable_tcam)(struct mv88e6xxx_chip *chip, int port);
+	int (*port_disable_tcam)(struct mv88e6xxx_chip *chip, int port);
 
 	/* Snapshot the statistics for a port. The statistics can then
 	 * be read back a leisure but still with a consistent view.
