@@ -832,4 +832,13 @@ config INPUT_HISI_POWERKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called hisi_powerkey.
 
+config INPUT_RAVE_SP_PWRBUTTON
+	tristate "Rave SP Power button Driver"
+	depends on MFD_RAVE_SP
+	help
+	  Say Y here if you want to enable power key reporting from Rave SP
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called zii-pic-pwrbutton.
+
 endif
