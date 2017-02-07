@@ -1860,6 +1860,14 @@ config SENSORS_XGENE
 	  If you say yes here you get support for the temperature
 	  and power sensors for APM X-Gene SoC.
 
+config SENSORS_RAVE_SP
+	tristate "Rave SP sensors"
+	depends on MFD_RAVE_SP
+	help
+	  This driver provides support for the Rave SP
+	  sensors (voltage, temperature, etc)
+
+
 if ACPI
 
 comment "ACPI drivers"
