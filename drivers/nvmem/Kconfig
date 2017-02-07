@@ -144,4 +144,10 @@ config MESON_EFUSE
 	  This driver can also be built as a module. If so, the module
 	  will be called nvmem_meson_efuse.
 
+config RAVE_SP_EEPROM
+	tristate "Rave SP EEPROM Support"
+	depends on MFD_RAVE_SP
+	help
+	  Say y here to enable Rave SP EEPROM support.
+
 endif
