@@ -694,6 +694,14 @@ config LEDS_NIC78BX
 	  To compile this driver as a module, choose M here: the module
 	  will be called leds-nic78bx.
 
+config LEDS_RAVE_SP
+	tristate "LED support for LEDs connected to Rave SP"
+	depends on LEDS_CLASS && MFD_RAVE_SP
+	help
+	  This option enables support for LEDs connected to Zodiac
+	  Inflight Innovations PIC controller.
+
+
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
 
