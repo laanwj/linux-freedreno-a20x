@@ -212,6 +212,13 @@ config ZIIRAVE_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called ziirave_wdt.
 
+config RAVE_SP_WATCHDOG
+	tristate "RAVE SP Watchdog timer"
+	depends on MFD_RAVE_SP
+	select WATCHDOG_CORE
+	help
+	  Support for the watchdog on RAVE SP device.
+
 # ALPHA Architecture
 
 # ARM Architecture

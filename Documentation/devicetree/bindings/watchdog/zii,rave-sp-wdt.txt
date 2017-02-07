@@ -1,0 +1,10 @@
+Zodiac Inflight Innovations RAVE Supervisory Processor Watchdog
+
+Required properties:
+
+ - compatible: Should be "zii,rave-sp-watchdog"
+
+Optional properties:
+
+ - Two byte nvmem cell "wdt_timeout", specified as per
+   Documentation/devicetree/bindings/nvmem/nvmem.txt
