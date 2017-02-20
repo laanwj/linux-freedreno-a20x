@@ -310,6 +310,7 @@ static int cpu_pmu_device_probe(struct platform_device *pdev)
 
 	cpu_pmu = pmu;
 	cpu_pmu->plat_device = pdev;
+	dev_set_drvdata(&pdev->dev, pmu);
 
 	if (node && (of_id = of_match_node(cpu_pmu_of_device_ids, pdev->dev.of_node))) {
 		pmu->activated_flags.secure_regs_available =
