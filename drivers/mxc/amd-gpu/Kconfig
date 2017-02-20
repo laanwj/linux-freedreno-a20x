@@ -1,0 +1,13 @@
+#
+# Bluetooth configuration
+#
+
+menu "MXC GPU support"
+
+config MXC_AMD_GPU
+	tristate "MXC GPU support"
+	depends on SOC_IMX35 || SOC_IMX5
+	---help---
+         Say Y to get the GPU driver support.
+
+endmenu
