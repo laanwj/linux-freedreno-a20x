@@ -73,6 +73,7 @@ typedef struct _gsl_driver_t {
     int              dmi_frame;     //  set to -1 when DMI is enabled
     int              dmi_max_frame; //  indicates the maximum frame # that we will support
     int              enable_mmu;
+    void             *osdep_dev; // MF hack to store the struct device needed to get clocks
 } gsl_driver_t;
 
 

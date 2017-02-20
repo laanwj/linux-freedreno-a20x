@@ -516,18 +516,19 @@ kgsl_hal_setpowerstate(gsl_deviceid_t device_id, int state, unsigned int value)
 
 KGSLHAL_API int kgsl_clock(gsl_deviceid_t dev, int enable)
 {
+	struct device *linux_dev = gsl_driver.osdep_dev;
 	struct clk *gpu_clk = NULL;
 	struct clk *garb_clk = NULL;
 	struct clk *emi_garb_clk = NULL;
 
 	switch (dev) {
 	case GSL_DEVICE_G12:
-		gpu_clk = clk_get(0, "gpu2d_clk");
+		gpu_clk = clk_get(linux_dev, "gpu2d_clk");
 		break;
 	case GSL_DEVICE_YAMATO:
-		gpu_clk = clk_get(0, "gpu3d_clk");
-		garb_clk = clk_get(0, "garb_clk");
-		emi_garb_clk = clk_get(0, "emi_garb_clk");
+		gpu_clk = clk_get(linux_dev, "gpu3d_clk");
+		garb_clk = clk_get(linux_dev, "garb_clk");
+		emi_garb_clk = clk_get(linux_dev, "emi_garb_clk");
 		break;
 	default:
 		printk(KERN_ERR "GPU device %d is invalid!\n", dev);

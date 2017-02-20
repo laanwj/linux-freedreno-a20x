@@ -875,6 +875,7 @@ static int gpu_probe(struct platform_device *pdev)
 	printk(KERN_ERR "%s: kgsl_driver_init error\n", __func__);
 	goto kgsl_driver_init_error;
     }
+    gsl_driver.osdep_dev = &pdev->dev;
 
     gsl_kmod_major = register_chrdev(0, "gsl_kmod", &gsl_kmod_fops);
     gsl_kmod_vmops.fault = gsl_kmod_fault;
