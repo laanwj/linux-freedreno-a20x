@@ -16,6 +16,11 @@
 #ifndef _ANDROID_PMEM_H_
 #define _ANDROID_PMEM_H_
 
+#include <linux/err.h>
+
+struct file;
+struct inode;
+
 #define PMEM_IOCTL_MAGIC 'p'
 #define PMEM_GET_PHYS		_IOW(PMEM_IOCTL_MAGIC, 1, unsigned int)
 #define PMEM_MAP		_IOW(PMEM_IOCTL_MAGIC, 2, unsigned int)
