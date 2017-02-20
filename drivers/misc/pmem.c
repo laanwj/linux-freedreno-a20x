@@ -184,19 +184,19 @@ struct file_operations pmem_fops = {
 
 static int get_id(struct file *file)
 {
-	return MINOR(file->f_dentry->d_inode->i_rdev);
+	return MINOR(file->f_path.dentry->d_inode->i_rdev);
 }
 
 int is_pmem_file(struct file *file)
 {
 	int id;
 
-	if (unlikely(!file || !file->f_dentry || !file->f_dentry->d_inode))
+	if (unlikely(!file || !file->f_path.dentry || !file->f_path.dentry->d_inode))
 		return 0;
 	id = get_id(file);
 	if (unlikely(id >= PMEM_MAX_DEVICES))
 		return 0;
-	if (unlikely(file->f_dentry->d_inode->i_rdev !=
+	if (unlikely(file->f_path.dentry->d_inode->i_rdev !=
 	     MKDEV(MISC_MAJOR, pmem[id].dev.minor)))
 		return 0;
 	return 1;
@@ -218,19 +218,19 @@ static int has_allocation(struct file *file)
 
 static int is_master_owner(struct file *file)
 {
-	struct file *master_file;
+	struct fd master_fd;
 	struct pmem_data *data;
-	int put_needed, ret = 0;
+	int ret = 0;
 
 	if (!is_pmem_file(file) || !has_allocation(file))
 		return 0;
 	data = (struct pmem_data *)file->private_data;
 	if (PMEM_FLAGS_MASTERMAP & data->flags)
 		return 1;
-	master_file = fget_light(data->master_fd, &put_needed);
-	if (master_file && data->master_file == master_file)
+	master_fd = fdget(data->master_fd);
+	if (master_fd.file && data->master_file == master_fd.file)
 		ret = 1;
-	fput_light(master_file, put_needed);
+	fdput(master_fd);
 	return ret;
 }
 
@@ -826,25 +826,25 @@ static int pmem_connect(unsigned long connect, struct file *file)
 {
 	struct pmem_data *data = (struct pmem_data *)file->private_data;
 	struct pmem_data *src_data;
-	struct file *src_file;
-	int ret = 0, put_needed;
+	struct fd src_fd;
+	int ret = 0;
 
 	down_write(&data->sem);
 	/* retrieve the src file and check it is a pmem file with an alloc */
-	src_file = fget_light(connect, &put_needed);
-	DLOG("connect %p to %p\n", file, src_file);
-	if (!src_file) {
+	src_fd = fdget(connect);
+	DLOG("connect %p to %p\n", file, src_fd.file);
+	if (!src_fd.file) {
 		printk("pmem: src file not found!\n");
 		ret = -EINVAL;
 		goto err_no_file;
 	}
-	if (unlikely(!is_pmem_file(src_file) || !has_allocation(src_file))) {
+	if (unlikely(!is_pmem_file(src_fd.file) || !has_allocation(src_fd.file))) {
 		printk(KERN_INFO "pmem: src file is not a pmem file or has no "
 		       "alloc!\n");
 		ret = -EINVAL;
 		goto err_bad_file;
 	}
-	src_data = (struct pmem_data *)src_file->private_data;
+	src_data = (struct pmem_data *)src_fd.file->private_data;
 
 	if (has_allocation(file) && (data->index != src_data->index)) {
 		printk("pmem: file is already mapped but doesn't match this"
@@ -855,10 +855,10 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	data->index = src_data->index;
 	data->flags |= PMEM_FLAGS_CONNECTED;
 	data->master_fd = connect;
-	data->master_file = src_file;
+	data->master_file = src_fd.file;
 
 err_bad_file:
-	fput_light(src_file, put_needed);
+	fdput(src_fd);
 err_no_file:
 	up_write(&data->sem);
 	return ret;
