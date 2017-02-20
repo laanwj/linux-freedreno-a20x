@@ -312,6 +312,9 @@ static int cpu_pmu_device_probe(struct platform_device *pdev)
 	cpu_pmu->plat_device = pdev;
 
 	if (node && (of_id = of_match_node(cpu_pmu_of_device_ids, pdev->dev.of_node))) {
+		pmu->activated_flags.secure_regs_available =
+			of_property_read_bool(pdev->dev.of_node,
+						"secure-reg-access");
 		init_fn = of_id->data;
 		ret = init_fn(pmu);
 	} else {

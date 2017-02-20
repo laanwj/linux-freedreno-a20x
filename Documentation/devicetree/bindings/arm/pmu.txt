@@ -27,6 +27,13 @@ Optional properties:
 - qcom,no-pc-write : Indicates that this PMU doesn't support the 0xc and 0xd
                      events.
 
+- secure-reg-access : Indicates that secure mode access is available.
+		      This will cause the driver to do any setup required that
+		      is only possible in secure mode.
+		      If not present the secure registers will not be touched,
+		      which means the PMU may fail to operate unless external
+		      code (bootloader or security monitor) has performed the
+		      appropriate initialisation.
 Example:
 
 pmu {

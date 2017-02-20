@@ -836,12 +836,47 @@ static irqreturn_t armv7pmu_handle_irq(int irq_num, void *dev)
 	return IRQ_HANDLED;
 }
 
+#define SDER_SUNIDEN (1 << 1)
+
+static inline u32 armv2pmu_read_sder(void)
+{
+	u32 sder;
+
+	asm volatile("mrc p15, 0, %0, c1, c1, 1" : "=r" (sder));
+
+	return sder;
+}
+
+static inline void armv2pmu_write_sder(u32 sder)
+{
+	asm volatile("mcr p15, 0, %0, c1, c1, 1" : : "r" (sder));
+}
+
 static void armv7pmu_start(struct arm_pmu *cpu_pmu)
 {
 	unsigned long flags;
 	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu->hw_events);
 
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
+
+	/*
+	 * Counters other than cycle counter require SUNIDEN bit set
+	 * Set the bit if the DT configuration allows it (secure mode)
+	 * Otherwise do nothing and hope bootloader / secure monitor did the
+	 * setup.
+	 */
+	if (cpu_pmu->activated_flags.secure_regs_available) {
+		u32 sder = armv2pmu_read_sder();
+
+		if (sder & SDER_SUNIDEN) {
+			cpu_pmu->activated_flags.secure_debug_requested = 0;
+		} else {
+			sder |= SDER_SUNIDEN;
+			armv2pmu_write_sder(sder);
+			cpu_pmu->activated_flags.secure_debug_requested = 1;
+		}
+	}
+
 	/* Enable all counters */
 	armv7_pmnc_write(armv7_pmnc_read() | ARMV7_PMNC_E);
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
@@ -853,6 +888,15 @@ static void armv7pmu_stop(struct arm_pmu *cpu_pmu)
 	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu->hw_events);
 
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
+
+	if (cpu_pmu->activated_flags.secure_debug_requested) {
+		u32 sder = armv2pmu_read_sder();
+
+		sder &= ~SDER_SUNIDEN;
+		armv2pmu_write_sder(sder);
+		cpu_pmu->activated_flags.secure_debug_requested = 0;
+	}
+
 	/* Disable all counters */
 	armv7_pmnc_write(armv7_pmnc_read() & ~ARMV7_PMNC_E);
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);

@@ -117,6 +117,16 @@ struct arm_pmu {
 	struct platform_device	*plat_device;
 	struct pmu_hw_events	__percpu *hw_events;
 	struct notifier_block	hotplug_nb;
+
+	/*
+	 * Bits indicating any CPU or platform specific activations that have
+	 * been done so we can undo them when stopping
+	 */
+	struct {
+		unsigned int secure_regs_available : 1;
+		unsigned int secure_debug_requested : 1;
+		unsigned int platform_enabled : 1;
+	} activated_flags;
 };
 
 #define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
