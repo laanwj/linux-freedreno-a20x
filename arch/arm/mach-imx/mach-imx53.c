@@ -10,6 +10,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/android_pmem.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/err.h>
@@ -19,6 +20,7 @@
 #include <linux/of_platform.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
+#include <asm/memblock.h>
 #include <asm/pmu.h>
 
 #include "common.h"
@@ -99,9 +101,42 @@ static struct of_dev_auxdata imx53_auxdata_lookup[] __initdata = {
 	{}
 };
 
+#ifdef CONFIG_MXC_AMD_GPU
+static struct android_pmem_platform_data android_pmem_gpu_data = {
+	.name = "pmem_gpu",
+	.size = SZ_64M,
+	.cached = 1,
+};
+
+struct platform_device mxc_android_pmem_gpu_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = {.platform_data = &android_pmem_gpu_data},
+};
+#endif
+
+
+static void __init mx53_pmem_reserve(struct android_pmem_platform_data *pdata)
+{
+	pdata->start = arm_memblock_steal(pdata->size, pdata->size);
+	printk(KERN_INFO "Reserved physical memory for %s 0x%08lX bytes @ %08lX\n",
+		pdata->name, pdata->size, pdata->start);
+}
+
+static void __init imx53_pmem_reserve(void)
+{
+#ifdef CONFIG_MXC_AMD_GPU
+	mx53_pmem_reserve(&android_pmem_gpu_data);
+#endif
+}
+
 static void __init imx53_dt_init(void)
 {
 	imx_src_init();
+
+#ifdef CONFIG_MXC_AMD_GPU
+	platform_device_register(&mxc_android_pmem_gpu_device);
+#endif
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 					imx53_auxdata_lookup, NULL);
@@ -126,4 +161,7 @@ DT_MACHINE_START(IMX53_DT, "Freescale i.MX53 (Device Tree Support)")
 	.init_machine	= imx53_dt_init,
 	.init_late	= imx53_init_late,
 	.dt_compat	= imx53_dt_board_compat,
+#ifdef CONFIG_ANDROID_PMEM
+	.reserve 	= imx53_pmem_reserve,
+#endif
 MACHINE_END
