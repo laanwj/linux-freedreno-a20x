@@ -486,41 +486,16 @@ KGSLHAL_API int
 kgsl_hal_setpowerstate(gsl_deviceid_t device_id, int state, unsigned int value)
 {
 	gsl_device_t *device = &gsl_driver.device[device_id-1];
-	struct clk *gpu_clk = NULL;
-	struct clk *garb_clk = NULL;
-	struct clk *emi_garb_clk = NULL;
+	int rc = GSL_SUCCESS;
 
 	/* unreferenced formal parameters */
 	(void) value;
-
-	switch (device_id) {
-	case GSL_DEVICE_G12:
-		gpu_clk = clk_get(0, "gpu2d_clk");
-		break;
-	case GSL_DEVICE_YAMATO:
-		gpu_clk = clk_get(0, "gpu3d_clk");
-		garb_clk = clk_get(0, "garb_clk");
-		emi_garb_clk = clk_get(0, "emi_garb_clk");
-		break;
-	default:
-		return GSL_FAILURE_DEVICEERROR;
-	}
-
-	if (!gpu_clk) {
-		return GSL_FAILURE_DEVICEERROR;
-	}
 
 	switch (state) {
 	case GSL_PWRFLAGS_CLK_ON:
 		break;
 	case GSL_PWRFLAGS_POWER_ON:
-		clk_enable(gpu_clk);
-		if (garb_clk) {
-			clk_enable(garb_clk);
-		}
-		if (emi_garb_clk) {
-			clk_enable(emi_garb_clk);
-		}
+		rc = kgsl_clock(device_id, 1);
 		kgsl_device_autogate_init(&gsl_driver.device[device_id-1]);
 		break;
 	case GSL_PWRFLAGS_CLK_OFF:
@@ -530,19 +505,13 @@ kgsl_hal_setpowerstate(gsl_deviceid_t device_id, int state, unsigned int value)
 			return GSL_FAILURE_DEVICEERROR;
 		}
 		kgsl_device_autogate_exit(&gsl_driver.device[device_id-1]);
-		clk_disable(gpu_clk);
-		if (garb_clk) {
-			clk_disable(garb_clk);
-		}
-		if (emi_garb_clk) {
-			clk_disable(emi_garb_clk);
-		}
+		rc = kgsl_clock(device_id, 1);
 		break;
 	default:
 		break;
 	}
 
-	return GSL_SUCCESS;
+	return rc;
 }
 
 KGSLHAL_API int kgsl_clock(gsl_deviceid_t dev, int enable)
@@ -571,20 +540,20 @@ KGSLHAL_API int kgsl_clock(gsl_deviceid_t dev, int enable)
 	}
 
 	if (enable) {
-		clk_enable(gpu_clk);
-		if (garb_clk) {
-		    clk_enable(garb_clk);
+		clk_prepare_enable(gpu_clk);
+		if (!IS_ERR_OR_NULL(garb_clk)) {
+			clk_prepare_enable(garb_clk);
 		}
-		if (emi_garb_clk) {
-		    clk_enable(emi_garb_clk);
+		if (!IS_ERR_OR_NULL(emi_garb_clk)) {
+			clk_prepare_enable(emi_garb_clk);
 		}
 	} else {
-		clk_disable(gpu_clk);
-		if (garb_clk) {
-		    clk_disable(garb_clk);
+		clk_disable_unprepare(gpu_clk);
+		if (!IS_ERR_OR_NULL(garb_clk)) {
+			clk_disable_unprepare(garb_clk);
 		}
-		if (emi_garb_clk) {
-		    clk_disable(emi_garb_clk);
+		if (!IS_ERR_OR_NULL(emi_garb_clk)) {
+			clk_disable_unprepare(emi_garb_clk);
 		}
 	}
 
