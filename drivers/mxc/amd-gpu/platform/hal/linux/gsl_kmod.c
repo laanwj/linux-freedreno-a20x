@@ -38,6 +38,10 @@
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 #include <linux/uaccess.h>
+#ifdef CONFIG_OF
+#include <linux/of.h>
+#include <linux/of_device.h>
+#endif
 
 #include "mxc_gpu.h"
 
@@ -765,6 +769,32 @@ static irqreturn_t z430_irq_handler(int irq, void *dev_id)
     return IRQ_HANDLED;
 }
 
+#if CONFIG_OF
+static struct mxc_gpu_platform_data* gpu_parse_dt(struct device *dev)
+{
+	struct mxc_gpu_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+	u32 param_z160_revision = 1;
+	u32 param_enable_mmu = 0;
+
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return pdata;
+
+	of_property_read_u32(np, "z160-revision", &param_z160_revision);
+	of_property_read_u32(np, "enable-mmu", &param_enable_mmu);
+
+	pdata->enable_mmu = param_enable_mmu;
+	pdata->z160_revision = param_z160_revision;
+	return pdata;
+}
+#else
+static struct mxc_gpu_platform_data* gpu_parse_dt(struct device *dev)
+{
+	return NULL;
+}
+#endif
+
 static int gpu_probe(struct platform_device *pdev)
 {
     int i;
@@ -773,6 +803,9 @@ static int gpu_probe(struct platform_device *pdev)
     struct mxc_gpu_platform_data *pdata;
 
     pdata = pdev->dev.platform_data;
+    if (!pdata)
+	pdata = gpu_parse_dt(&pdev->dev);
+
     if (pdata) {
 	z160_version = pdata->z160_revision;
 	gpu_reserved_mem = pdata->reserved_mem_base;
@@ -955,9 +988,20 @@ static int gpu_resume(struct platform_device *pdev)
 
 /*! Driver definition
  */
+#ifdef CONFIG_OF
+static const struct of_device_id mxc_gpu_ids[] = {
+	{ .compatible = "fsl,imx53-gpu" },
+	{ /* sentinel */ }
+};
+#endif
+
 static struct platform_driver gpu_driver = {
     .driver = {
         .name = "mxc_gpu",
+#ifdef CONFIG_OF
+	.of_match_table = mxc_gpu_ids,
+#endif
+
         },
     .probe = gpu_probe,
     .remove = gpu_remove,
