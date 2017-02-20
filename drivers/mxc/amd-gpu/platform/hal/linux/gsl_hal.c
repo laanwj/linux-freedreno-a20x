@@ -53,22 +53,16 @@ extern int enable_mmu;
 
 
 KGSLHAL_API int
-kgsl_hal_allocphysical(unsigned int virtaddr, unsigned int numpages, unsigned int scattergatterlist[])
+kgsl_hal_allocphysical(unsigned int gpu_addr, unsigned int numpages, unsigned int scattergatterlist[])
 {
     /* allocate physically contiguous memory */
 
-	int i;
-	void *va;
+	struct gsl_linux_map *map = gsl_linux_map_alloc(gpu_addr, numpages*PAGE_SIZE);
 
-	va = gsl_linux_map_alloc(virtaddr, numpages*PAGE_SIZE);
-
-	if (!va)
+	if (!map)
 		return GSL_FAILURE_OUTOFMEM;
 
-	for (i = 0; i < numpages; i++) {
-		scattergatterlist[i] = page_to_phys(vmalloc_to_page(va));
-		va += PAGE_SIZE;
-	}
+	gsl_linux_map_fill_sg(map, scattergatterlist);
 
 	return GSL_SUCCESS;
 }
