@@ -27,7 +27,7 @@
 #include <linux/semaphore.h>
 
 typedef struct _gsl_autogate_t {
-    struct timer_list timer;	
+    struct timer_list timer;
     spinlock_t lock;
     int active;
     /* pending indicate the timer has been fired but clock not yet disabled. */
@@ -61,7 +61,7 @@ static int _kgsl_device_active(gsl_device_t *dev, int all)
 		printk(KERN_ERR "%s: autogate has exited!\n", __func__);
 		return 0;
 	}
-//	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
+	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
 
 	spin_lock_irqsave(&autogate->lock, flags);
 	if (in_interrupt()) {
@@ -96,7 +96,7 @@ static void kgsl_device_inactive(unsigned long data)
 	gsl_autogate_t *autogate = (gsl_autogate_t *)data;
 	unsigned long flags;
 
-//	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, autogate->dev->id, autogate->active);
+	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, autogate->dev->id, autogate->active);
 	del_timer(&autogate->timer);
 	spin_lock_irqsave(&autogate->lock, flags);
 	WARN(!autogate->active, "GPU Device %d is already inactive\n", autogate->dev->id);
@@ -123,7 +123,7 @@ int kgsl_device_clock(gsl_deviceid_t id, int enable)
 		printk(KERN_ERR "%s: Dev %d clock is already off!\n", __func__, id);
 		ret = GSL_FAILURE;
 	}
-	
+
 	return ret;
 }
 

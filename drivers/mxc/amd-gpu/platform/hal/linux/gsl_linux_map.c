@@ -207,6 +207,27 @@ static struct gsl_linux_map *gsl_linux_map_find_entry(unsigned int gpu_addr)
 	return NULL;
 }
 
+void *gsl_linux_find_kaddr(unsigned int gpu_addr)
+{
+	struct gsl_linux_map * map;
+	struct list_head *p;
+
+	mutex_lock(&gsl_linux_map_mutex);
+
+	list_for_each(p, &gsl_linux_map_list){
+		map = list_entry(p, struct gsl_linux_map, list);
+		if(map->gpu_addr <= gpu_addr &&
+			(map->gpu_addr +  map->size) > gpu_addr){
+			void *src = map->kernel_virtual_addr + (gpu_addr - map->gpu_addr);
+			mutex_unlock(&gsl_linux_map_mutex);
+			return src;
+		}
+	}
+
+	mutex_unlock(&gsl_linux_map_mutex);
+	return NULL;
+}
+
 void *gsl_linux_map_read(void *dst, unsigned int gpuoffset, unsigned int sizebytes, unsigned int touserspace)
 {
 	struct gsl_linux_map * map;
