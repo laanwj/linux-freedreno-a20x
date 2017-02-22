@@ -11,7 +11,7 @@ obj-$(CONFIG_DRM_IMX_LDB) += imx-ldb.o
 imx-ipuv3-crtc-objs  := ipuv3-crtc.o ipuv3-plane.o
 obj-$(CONFIG_DRM_IMX_IPUV3)	+= imx-ipuv3-crtc.o
 obj-$(CONFIG_DRM_IMX_HDMI) += imx-hdmi.o
-obj-$(CONFIG_DRM_IMX_ADRENO) += imx-gpu.o \
+obj-$(CONFIG_DRM_IMX_ADRENO) += imx-gpu.o msm2cma.o \
 	../msm/adreno/adreno_device.o \
 	../msm/adreno/adreno_gpu.o \
 	../msm/adreno/a3xx_gpu.o \
