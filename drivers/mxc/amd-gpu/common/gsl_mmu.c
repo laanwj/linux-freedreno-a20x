@@ -412,7 +412,7 @@ kgsl_mmu_setpagetable(gsl_device_t *device, unsigned int pid)
 			{
 				mmu->hwpagetable = pagetable;
 
-				// flag tlb flush	
+				// flag tlb flush
 				mmu->flags |= GSL_MMUFLAGS_TLBFLUSH;
 
 				status = mmu->device->ftbl.mmu_setpagetable(mmu->device, gsl_cfg_mmu_reg[devindex].PT_BASE, pagetable->base.gpuaddr, pid);
@@ -485,6 +485,7 @@ kgsl_mmu_init(gsl_device_t *device)
     // setup backward reference
     mmu->device = device;
 
+    printk(KERN_INFO "@MF@ mmu config=%08x flags=%x\n", mmu->config, device->flags);
     // disable MMU when running in safe mode
     if (device->flags & GSL_FLAGS_SAFEMODE)
     {
@@ -683,7 +684,7 @@ kgsl_mmu_map(gsl_mmu_t *mmu, gpuaddr_t gpubaseaddr, const gsl_scatterlist_t *sca
             }
         }
 
-        // determine new last mapped superPTE 
+        // determine new last mapped superPTE
         superpte = ptelast - (ptelast & (GSL_PT_SUPER_PTE-1));
         if (superpte > pagetable->last_superpte)
         {
@@ -782,7 +783,7 @@ kgsl_mmu_unmap(gsl_mmu_t *mmu, gpuaddr_t gpubaseaddr, int range, unsigned int pi
 			KGSL_DEBUG(GSL_DBGFLAGS_DUMPX, KGSL_DEBUG_DUMPX(BB_DUMP_SET_MMUTBL, pte, *(unsigned int*)(((char*)pagetable->base.hostptr) + (pte * GSL_PT_ENTRY_SIZEBYTES)), 0, "kgsl_mmu_unmap, reset superPTE"));
         }
 
-        // determine new last mapped superPTE 
+        // determine new last mapped superPTE
         superpte = ptelast - (ptelast & (GSL_PT_SUPER_PTE-1));
         if (superpte == pagetable->last_superpte && pagetable->last_superpte >= GSL_PT_SUPER_PTE)
         {
@@ -817,7 +818,7 @@ kgsl_mmu_unmap(gsl_mmu_t *mmu, gpuaddr_t gpubaseaddr, int range, unsigned int pi
 
 //----------------------------------------------------------------------------
 
-int         
+int
 kgsl_mmu_getmap(gsl_mmu_t *mmu, gpuaddr_t gpubaseaddr, int range, gsl_scatterlist_t *scatterlist, unsigned int pid)
 {
     //
