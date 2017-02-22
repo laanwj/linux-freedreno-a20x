@@ -237,14 +237,6 @@ static inline int msm_debugfs_late_init(struct drm_device *dev) { return 0; }
 static inline void msm_rd_dump_submit(struct msm_gem_submit *submit) {}
 #endif
 
-void __iomem *msm_ioremap(struct platform_device *pdev, const char *name,
-		const char *dbgname);
-void msm_writel(u32 data, void __iomem *addr);
-u32 msm_readl(const void __iomem *addr);
-
-#define DBG(fmt, ...) DRM_DEBUG(fmt"\n", ##__VA_ARGS__)
-#define VERB(fmt, ...) if (0) DRM_DEBUG(fmt"\n", ##__VA_ARGS__)
-
 static inline bool fence_completed(struct drm_device *dev, uint32_t fence)
 {
 	struct msm_drm_private *priv = dev->dev_private;

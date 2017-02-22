@@ -23,6 +23,7 @@
 
 #include "msm_drv.h"
 #include "msm_ringbuffer.h"
+#include "msm_util.h"
 
 struct msm_gem_submit;
 struct msm_gpu_perfcntr;
