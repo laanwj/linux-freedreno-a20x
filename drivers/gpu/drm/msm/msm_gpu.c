@@ -238,7 +238,7 @@ static void inactive_worker(struct work_struct *work)
 static void inactive_handler(unsigned long data)
 {
 	struct msm_gpu *gpu = (struct msm_gpu *)data;
-	struct msm_drm_private *priv = gpu->dev->dev_private;
+	struct msm_plat_private *priv = gpu->dev->dev_private;
 
 	queue_work(priv->wq, &gpu->inactive_work);
 }
@@ -294,7 +294,7 @@ static void hangcheck_handler(unsigned long data)
 {
 	struct msm_gpu *gpu = (struct msm_gpu *)data;
 	struct drm_device *dev = gpu->dev;
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	uint32_t fence = gpu->funcs->last_fence(gpu);
 
 	if (fence != gpu->hangcheck_fence) {
@@ -455,7 +455,7 @@ static void retire_worker(struct work_struct *work)
 /* call from irq handler to schedule work to retire bo's */
 void msm_gpu_retire(struct msm_gpu *gpu)
 {
-	struct msm_drm_private *priv = gpu->dev->dev_private;
+	struct msm_plat_private *priv = gpu->dev->dev_private;
 	queue_work(priv->wq, &gpu->retire_work);
 	update_sw_cntrs(gpu);
 }
@@ -465,7 +465,7 @@ int msm_gpu_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 		struct msm_file_private *ctx)
 {
 	struct drm_device *dev = gpu->dev;
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	int i, ret;
 
 	submit->fence = ++priv->next_fence;

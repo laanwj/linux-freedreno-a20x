@@ -160,7 +160,7 @@ static int rd_open(struct inode *inode, struct file *file)
 {
 	struct msm_rd_state *rd = inode->i_private;
 	struct drm_device *dev = rd->dev;
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	struct msm_gpu *gpu = priv->gpu;
 	uint64_t val;
 	uint32_t gpu_id;
@@ -207,7 +207,7 @@ static const struct file_operations rd_debugfs_fops = {
 
 int msm_rd_debugfs_init(struct drm_minor *minor)
 {
-	struct msm_drm_private *priv = minor->dev->dev_private;
+	struct msm_plat_private *priv = minor->dev->dev_private;
 	struct msm_rd_state *rd;
 
 	/* only create on first minor: */
@@ -255,7 +255,7 @@ fail:
 
 void msm_rd_debugfs_cleanup(struct drm_minor *minor)
 {
-	struct msm_drm_private *priv = minor->dev->dev_private;
+	struct msm_plat_private *priv = minor->dev->dev_private;
 	struct msm_rd_state *rd = priv->rd;
 
 	if (!rd)
@@ -281,7 +281,7 @@ void msm_rd_debugfs_cleanup(struct drm_minor *minor)
 void msm_rd_dump_submit(struct msm_gem_submit *submit)
 {
 	struct drm_device *dev = submit->dev;
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	struct msm_rd_state *rd = priv->rd;
 	char msg[128];
 	int i, n;

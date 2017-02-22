@@ -123,7 +123,7 @@ int adreno_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 		struct msm_file_private *ctx)
 {
 	struct adreno_gpu *adreno_gpu = to_adreno_gpu(gpu);
-	struct msm_drm_private *priv = gpu->dev->dev_private;
+	struct msm_plat_private *priv = gpu->dev->dev_private;
 	struct msm_ringbuffer *ring = gpu->rb;
 	unsigned i, ibs = 0;
 

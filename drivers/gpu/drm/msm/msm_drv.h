@@ -47,6 +47,8 @@
 #include <drm/msm_drm.h>
 #include <drm/drm_gem.h>
 
+#include "msm_plat.h"
+
 struct msm_kms;
 struct msm_gpu;
 struct msm_mmu;
@@ -55,36 +57,17 @@ struct msm_perf_state;
 struct msm_gem_submit;
 struct msm_fence_cb;
 
-#define NUM_DOMAINS 2    /* one for KMS, then one per gpu core (?) */
-
-struct msm_file_private {
-	/* currently we don't do anything useful with this.. but when
-	 * per-context address spaces are supported we'd keep track of
-	 * the context's page-tables here.
-	 */
-	int dummy;
-};
-
 struct msm_drm_private {
+	struct msm_plat_private	plat;	/* This must be FIRST member */
 
 	struct msm_kms *kms;
-
-	/* subordinate devices, if present: */
-	struct platform_device *gpu_pdev;
 
 	/* possibly this should be in the kms component, but it is
 	 * shared by both mdp4 and mdp5..
 	 */
 	struct hdmi *hdmi;
 
-	/* when we have more than one 'msm_gpu' these need to be an array: */
-	struct msm_gpu *gpu;
-	struct msm_file_private *lastctx;
-
 	struct drm_fb_helper *fbdev;
-
-	uint32_t next_fence, completed_fence;
-	wait_queue_head_t fence_event;
 
 	struct msm_rd_state *rd;
 	struct msm_perf_state *perf;
@@ -101,10 +84,6 @@ struct msm_drm_private {
 	uint32_t pending_crtcs;
 	wait_queue_head_t pending_crtcs_event;
 
-	/* registered MMUs: */
-	unsigned int num_mmus;
-	struct msm_mmu *mmus[NUM_DOMAINS];
-
 	unsigned int num_planes;
 	struct drm_plane *planes[8];
 
@@ -119,16 +98,6 @@ struct msm_drm_private {
 
 	unsigned int num_connectors;
 	struct drm_connector *connectors[8];
-
-	/* VRAM carveout, used when no IOMMU: */
-	struct {
-		unsigned long size;
-		dma_addr_t paddr;
-		/* NOTE: mm managed at the page level, size is in # of pages
-		 * and position mm_node->start is in # of pages:
-		 */
-		struct drm_mm mm;
-	} vram;
 };
 
 struct msm_format {

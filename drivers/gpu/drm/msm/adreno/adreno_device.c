@@ -99,7 +99,7 @@ const struct adreno_info *adreno_info(struct adreno_rev rev)
 
 struct msm_gpu *adreno_load_gpu(struct drm_device *dev)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	struct platform_device *pdev = priv->gpu_pdev;
 	struct adreno_platform_config *config;
 	struct adreno_rev rev;
@@ -153,7 +153,7 @@ struct msm_gpu *adreno_load_gpu(struct drm_device *dev)
 static void set_gpu_pdev(struct drm_device *dev,
 		struct platform_device *pdev)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	priv->gpu_pdev = pdev;
 }
 

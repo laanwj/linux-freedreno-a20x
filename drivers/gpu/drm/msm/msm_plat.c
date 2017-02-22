@@ -4,7 +4,7 @@
 
 int msm_register_mmu(struct drm_device *dev, struct msm_mmu *mmu)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	int idx = priv->num_mmus++;
 
 	if (WARN_ON(idx >= ARRAY_SIZE(priv->mmus)))

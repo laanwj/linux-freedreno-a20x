@@ -1,10 +1,11 @@
 #include "msm_fence.h"
 #include "msm_gpu.h"
+#include "msm_plat.h"
 #include "msm_util.h"
 
 static inline bool fence_completed(struct drm_device *dev, uint32_t fence)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	return priv->completed_fence >= fence;
 }
 
@@ -12,7 +13,7 @@ static inline bool fence_completed(struct drm_device *dev, uint32_t fence)
 int msm_wait_fence_interruptable(struct drm_device *dev, uint32_t fence,
 		struct timespec *timeout)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	int ret;
 
 	if (!priv->gpu)
@@ -56,7 +57,7 @@ int msm_wait_fence_interruptable(struct drm_device *dev, uint32_t fence,
 int msm_queue_fence_cb(struct drm_device *dev,
 		struct msm_fence_cb *cb, uint32_t fence)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	int ret = 0;
 
 	mutex_lock(&dev->struct_mutex);
@@ -76,7 +77,7 @@ int msm_queue_fence_cb(struct drm_device *dev,
 /* called from workqueue */
 void msm_update_fence(struct drm_device *dev, uint32_t fence)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 
 	mutex_lock(&dev->struct_mutex);
 	priv->completed_fence = max(fence, priv->completed_fence);

@@ -528,7 +528,7 @@ struct msm_gpu *a3xx_gpu_init(struct drm_device *dev)
 	struct a3xx_gpu *a3xx_gpu = NULL;
 	struct adreno_gpu *adreno_gpu;
 	struct msm_gpu *gpu;
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	struct platform_device *pdev = priv->gpu_pdev;
 	int ret;
 

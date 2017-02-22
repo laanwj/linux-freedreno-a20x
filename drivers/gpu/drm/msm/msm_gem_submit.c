@@ -320,7 +320,7 @@ static void submit_cleanup(struct msm_gem_submit *submit, bool fail)
 int msm_ioctl_gem_submit(struct drm_device *dev, void *data,
 		struct drm_file *file)
 {
-	struct msm_drm_private *priv = dev->dev_private;
+	struct msm_plat_private *priv = dev->dev_private;
 	struct drm_msm_gem_submit *args = data;
 	struct msm_file_private *ctx = file->driver_priv;
 	struct msm_gem_submit *submit;
