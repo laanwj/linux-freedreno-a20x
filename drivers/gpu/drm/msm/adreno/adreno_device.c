@@ -34,6 +34,14 @@ struct msm_gpu *a4xx_gpu_init(struct drm_device *dev);
 
 static const struct adreno_info gpulist[] = {
 	{
+		.rev   = ADRENO_REV(2, 0, 5, ANY_ID),
+		.revn  = 205,
+		.name  = "A205",
+		.pm4fw = "a200_pm4.fw",
+		.pfpfw = "a200_pfp.fw",
+		.gmem  = SZ_256K,
+		.init  = a2xx_gpu_init,
+	}, {
 		.rev   = ADRENO_REV(3, 0, 5, ANY_ID),
 		.revn  = 305,
 		.name  = "A305",
@@ -165,6 +173,8 @@ static int adreno_bind(struct device *dev, struct device *master, void *data)
 	u32 val;
 	int ret;
 
+	printk(KERN_INFO "@MF@ %s\n", __func__);
+
 	ret = of_property_read_u32(node, "qcom,chipid", &val);
 	if (ret) {
 		dev_err(dev, "could not find chipid: %d\n", ret);
@@ -174,6 +184,10 @@ static int adreno_bind(struct device *dev, struct device *master, void *data)
 	config.rev = ADRENO_REV((val >> 24) & 0xff,
 			(val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff);
 
+#ifdef CONFIG_DRM_IMX_ADRENO /* @MF@ XXX */
+	config.fast_rate = 0;
+	config.slow_rate = 0;
+#else
 	/* find clock rates: */
 	config.fast_rate = 0;
 	config.slow_rate = ~0;
@@ -196,6 +210,7 @@ static int adreno_bind(struct device *dev, struct device *master, void *data)
 		dev_err(dev, "could not find clk rates\n");
 		return -ENXIO;
 	}
+#endif /* CONFIG_DRM_IMX_ADRENO */
 
 #else
 	struct kgsl_device_platform_data *pdata = dev->platform_data;
@@ -244,6 +259,7 @@ static int adreno_bind(struct device *dev, struct device *master, void *data)
 	config.bus_scale_table = pdata->bus_scale_table;
 #  endif
 #endif
+	dev_info(dev, "@MF@ %s ok current PD=%p\n", __func__, dev->platform_data);
 	dev->platform_data = &config;
 	set_gpu_pdev(dev_get_drvdata(master), to_platform_device(dev));
 	return 0;
@@ -262,6 +278,7 @@ static const struct component_ops a3xx_ops = {
 
 static int adreno_probe(struct platform_device *pdev)
 {
+	printk(KERN_INFO "@MF@ %s\n", __func__);
 	return component_add(&pdev->dev, &a3xx_ops);
 }
 
@@ -273,6 +290,7 @@ static int adreno_remove(struct platform_device *pdev)
 
 static const struct of_device_id dt_match[] = {
 	{ .compatible = "qcom,adreno-3xx" },
+	{ .compatible = "fsl,imx53-gpu" },
 	/* for backwards compat w/ downstream kgsl DT files: */
 	{ .compatible = "qcom,kgsl-3d0" },
 	{}

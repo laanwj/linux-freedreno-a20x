@@ -52,3 +52,9 @@ config DRM_IMX_HDMI
 	depends on DRM_IMX
 	help
 	  Choose this if you want to use HDMI on i.MX6.
+
+config DRM_IMX_ADRENO
+	tristate "Freescale i.MX ADRENO GPU"
+	depends on DRM_IMX
+	help
+	  Choose this if you want to use the Adreno GPU on the i.MX53

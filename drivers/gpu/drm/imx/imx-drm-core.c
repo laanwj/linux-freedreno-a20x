@@ -28,6 +28,13 @@
 
 #include "imx-drm.h"
 
+#ifdef CONFIG_DRM_IMX_ADRENO
+#include "msm_ioctl.h"
+#include "msm_gem.h"
+#include "imx-gpu.h"
+#include "msm_plat.h"
+#endif
+
 #define MAX_CRTC	4
 
 struct imx_drm_component {
@@ -36,6 +43,9 @@ struct imx_drm_component {
 };
 
 struct imx_drm_device {
+#ifdef CONFIG_DRM_IMX_ADRENO
+	struct msm_plat_private			plat;	/* This must be FIRST */
+#endif
 	struct drm_device			*drm;
 	struct imx_drm_crtc			*crtc[MAX_CRTC];
 	int					pipes;
@@ -195,7 +205,11 @@ static const struct file_operations imx_drm_driver_fops = {
 	.open = drm_open,
 	.release = drm_release,
 	.unlocked_ioctl = drm_ioctl,
+#ifdef CONFIG_DRM_IMX_ADRENO
+	.mmap = msm_gem_mmap,
+#else
 	.mmap = drm_gem_cma_mmap,
+#endif
 	.poll = drm_poll,
 	.read = drm_read,
 	.llseek = noop_llseek,
@@ -521,7 +535,6 @@ int imx_drm_encoder_get_mux_id(struct device_node *node,
 EXPORT_SYMBOL_GPL(imx_drm_encoder_get_mux_id);
 
 static const struct drm_ioctl_desc imx_drm_ioctls[] = {
-	/* none so far */
 };
 
 static struct drm_driver imx_drm_driver = {
@@ -549,8 +562,14 @@ static struct drm_driver imx_drm_driver = {
 	.get_vblank_counter	= drm_vblank_count,
 	.enable_vblank		= imx_drm_enable_vblank,
 	.disable_vblank		= imx_drm_disable_vblank,
+#ifdef CONFIG_DRM_IMX_ADRENO
+	.open			= imxgpu_open,
+	.ioctls			= msm_drm_ioctls,
+	.num_ioctls		= ARRAY_SIZE(msm_drm_ioctls),
+#else
 	.ioctls			= imx_drm_ioctls,
 	.num_ioctls		= ARRAY_SIZE(imx_drm_ioctls),
+#endif
 	.fops			= &imx_drm_driver_fops,
 	.name			= "imxdrm",
 	.desc			= "i.MX DRM graphics",
@@ -636,6 +655,15 @@ static int imx_drm_platform_probe(struct platform_device *pdev)
 			of_node_put(remote);
 		}
 		of_node_put(port);
+	}
+
+	for (i = 0; ; i++) {
+		port = of_parse_phandle(pdev->dev.of_node, "gpus", i);
+		if (!port)
+			break;
+
+		printk(KERN_INFO "@MF@ adding gpu %d\n", i);
+		component_match_add(&pdev->dev, &match, compare_of, port);
 	}
 
 	ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));

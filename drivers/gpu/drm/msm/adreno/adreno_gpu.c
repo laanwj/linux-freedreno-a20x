@@ -321,6 +321,8 @@ int adreno_gpu_init(struct drm_device *drm, struct platform_device *pdev,
 	gpu->bus_scale_table = config->bus_scale_table;
 #endif
 
+	printk(KERN_INFO "@MF@ %s\n", __func__);
+
 	DBG("fast_rate=%u, slow_rate=%u, bus_freq=%u",
 			gpu->fast_rate, gpu->slow_rate, gpu->bus_freq);
 
