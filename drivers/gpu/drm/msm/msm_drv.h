@@ -138,8 +138,6 @@ struct msm_format {
 int msm_atomic_commit(struct drm_device *dev,
 		struct drm_atomic_state *state, bool async);
 
-int msm_register_mmu(struct drm_device *dev, struct msm_mmu *mmu);
-
 int msm_ioctl_gem_submit(struct drm_device *dev, void *data,
 		struct drm_file *file);
 

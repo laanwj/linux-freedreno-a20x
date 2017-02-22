@@ -19,6 +19,7 @@
 
 #include "msm_drv.h"
 #include "msm_mmu.h"
+#include "msm_plat.h"
 #include "mdp5_kms.h"
 
 static const char *iommu_ports[] = {

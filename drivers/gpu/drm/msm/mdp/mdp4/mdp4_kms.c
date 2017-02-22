@@ -19,6 +19,7 @@
 #include "msm_drv.h"
 #include "msm_mmu.h"
 #include "mdp4_kms.h"
+#include "msm_plat.h"
 
 static struct mdp4_platform_config *mdp4_get_config(struct platform_device *dev);
 

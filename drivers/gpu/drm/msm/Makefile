@@ -43,6 +43,7 @@ msm-y := \
 	msm_gpu.o \
 	msm_iommu.o \
 	msm_perf.o \
+	msm_plat.o \
 	msm_rd.o \
 	msm_ringbuffer.o \
 	msm_util.o
