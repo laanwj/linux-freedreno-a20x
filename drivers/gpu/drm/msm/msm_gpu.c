@@ -15,6 +15,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "msm_fence.h"
 #include "msm_gpu.h"
 #include "msm_gem.h"
 #include "msm_mmu.h"

@@ -20,6 +20,7 @@
 #include <linux/dma-buf.h>
 
 #include "msm_drv.h"
+#include "msm_fence.h"
 #include "msm_gem.h"
 #include "msm_gpu.h"
 #include "msm_mmu.h"
