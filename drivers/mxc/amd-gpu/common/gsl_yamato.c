@@ -19,6 +19,7 @@
 #include "gsl.h"
 #include "gsl_hal.h"
 #ifdef _LINUX
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
 #endif
@@ -54,6 +55,17 @@ kgsl_yamato_gmeminit(gsl_device_t *device)
     rb_edram_info.f.edram_range        = (device->gmemspace.gpu_base >> 14);    // must be aligned to size
 
     device->ftbl.device_regwrite(device, mmRB_EDRAM_INFO, (unsigned int)rb_edram_info.val);
+
+    printk(KERN_INFO "@MF@ %s: gmem: size=%08x virt=%p phs=%08x gpu=%08x edram: size=%x mode=%x range=%x val=%x\n",
+    	    __func__,
+    	    device->gmemspace.sizebytes,
+    	    device->gmemspace.mmio_virt_base,
+    	    device->gmemspace.mmio_phys_base,
+    	    device->gmemspace.gpu_base,
+    	    rb_edram_info.f.edram_size,
+    	    rb_edram_info.f.edram_mapping_mode,
+    	    rb_edram_info.f.edram_range,
+    	    rb_edram_info.val);
 
     return (GSL_SUCCESS);
 }
@@ -106,7 +118,7 @@ kgsl_yamato_cpintrcallback(gsl_intrid_t id, void *cookie)
     switch(id)
     {
         case GSL_INTR_YDX_CP_RING_BUFFER:
-#ifndef _LINUX		
+#ifndef _LINUX
               kos_event_signal(device->timestamp_event);
 #else
 			  wake_up_interruptible_all(&(device->timestamp_waitq));
@@ -177,6 +189,34 @@ kgsl_yamato_bist(gsl_device_t *device)
 #endif
 
 //----------------------------------------------------------------------------
+static void mf_dump_state(gsl_device_t *device)
+{
+    u32 rbbm_status, cl_status, me_status, sc_status, sq_status, su_status, tc_status, tpc_status, tpo_status, vgt_status;
+    u32 scratch5, scratch6, scratch7, ts0, ts1;
+
+    device->ftbl.device_regread(device, mmRBBM_STATUS, &rbbm_status);
+    device->ftbl.device_regread(device, mmPA_CL_CNTL_STATUS, &cl_status);
+    device->ftbl.device_regread(device, mmCP_ME_STATUS, &me_status);
+    device->ftbl.device_regread(device, mmPA_SC_CNTL_STATUS, &sc_status);
+    device->ftbl.device_regread(device, mmSQ_INT_STATUS, &sq_status);
+    device->ftbl.device_regread(device, mmPA_SU_CNTL_STATUS, &su_status);
+    device->ftbl.device_regread(device, mmTC_CNTL_STATUS, &tc_status);
+    device->ftbl.device_regread(device, mmTPC_CNTL_STATUS, &tpc_status);
+    device->ftbl.device_regread(device, mmTP0_CNTL_STATUS, &tpo_status);
+    device->ftbl.device_regread(device, mmVGT_CNTL_STATUS, &vgt_status);
+    device->ftbl.device_regread(device, mmSCRATCH_REG5, &scratch5);
+    device->ftbl.device_regread(device, mmSCRATCH_REG6, &scratch6);
+    device->ftbl.device_regread(device, mmSCRATCH_REG7, &scratch7);
+    device->ftbl.device_regread(device, mmCP_TIMESTAMP, &ts0);
+
+    GSL_CMDSTREAM_GET_EOP_TIMESTAMP(device, &ts1);
+    printk(KERN_INFO "@MF@ status: rbbm=%08x cl=%08x me=%08x sc=%08x sq=%08x su=%08x tc=%08x tpc=%08x tpo=%08x vgt=%08x\n",
+    	    rbbm_status, cl_status, me_status, sc_status, sq_status, su_status, tc_status, tpc_status, tpo_status, vgt_status);
+
+    printk(KERN_INFO "@MF@ state: scratch5=0x%x scratch6=0x%x scratch7=0x%x ts0=%d ts1=%d\n",
+    	    scratch5, scratch6, scratch7, ts0, ts1);
+}
+
 
 int
 kgsl_yamato_isr(gsl_device_t *device)
@@ -191,6 +231,8 @@ kgsl_yamato_isr(gsl_device_t *device)
 
     // determine if yamato is interrupting, and if so, which block
     device->ftbl.device_regread(device, mmMASTER_INT_SIGNAL, &status);
+
+    mf_dump_state(device);
 
     if (status & MASTER_INT_SIGNAL__MH_INT_STAT)
     {
@@ -273,14 +315,14 @@ kgsl_yamato_setpagetable(gsl_device_t *device, unsigned int reg_ptbase, gpuaddr_
         link[2] = pm4_type0_packet(reg_ptbase, 1);
 		link[3] = ptbase;
 
-        // HW workaround: to resolve MMU page fault interrupts caused by the VGT. It prevents 
-		// the CP PFP from filling the VGT DMA request fifo too early, thereby ensuring that 
-		// the VGT will not fetch vertex/bin data until after the page table base register 
+        // HW workaround: to resolve MMU page fault interrupts caused by the VGT. It prevents
+		// the CP PFP from filling the VGT DMA request fifo too early, thereby ensuring that
+		// the VGT will not fetch vertex/bin data until after the page table base register
 		// has been updated.
 		//
-		// Two null DRAW_INDX_BIN packets are inserted right after the page table base update, 
-		// followed by a wait for idle. The null packets will fill up the VGT DMA request 
-		// fifo and prevent any further vertex/bin updates from occurring until the wait 
+		// Two null DRAW_INDX_BIN packets are inserted right after the page table base update,
+		// followed by a wait for idle. The null packets will fill up the VGT DMA request
+		// fifo and prevent any further vertex/bin updates from occurring until the wait
 		// has finished.
 		link[4]  = pm4_type3_packet(PM4_SET_CONSTANT, 2);
 		link[5]  = (0x4 << 16) | (mmPA_SU_SC_MODE_CNTL - 0x2000);
@@ -454,8 +496,8 @@ kgsl_yamato_start(gsl_device_t *device, gsl_flags_t flags)
     kgsl_intr_attach(&device->intr, GSL_INTR_YDX_RBBM_GUI_IDLE, kgsl_yamato_rbbmintrcallback, (void *) device);
     kgsl_intr_enable(&device->intr, GSL_INTR_YDX_RBBM_READ_ERROR);
     kgsl_intr_enable(&device->intr, GSL_INTR_YDX_RBBM_DISPLAY_UPDATE);
-#if defined GSL_RB_TIMESTAMP_INTERUPT	
-	kgsl_intr_attach(&device->intr, GSL_INTR_YDX_CP_RING_BUFFER, kgsl_yamato_cpintrcallback, (void *) device);    
+#if defined GSL_RB_TIMESTAMP_INTERUPT
+	kgsl_intr_attach(&device->intr, GSL_INTR_YDX_CP_RING_BUFFER, kgsl_yamato_cpintrcallback, (void *) device);
     kgsl_intr_enable(&device->intr, GSL_INTR_YDX_CP_RING_BUFFER);
 #endif
 
@@ -509,7 +551,7 @@ kgsl_yamato_stop(gsl_device_t *device)
     kgsl_intr_detach(&device->intr, GSL_INTR_YDX_RBBM_READ_ERROR);
     kgsl_intr_detach(&device->intr, GSL_INTR_YDX_RBBM_DISPLAY_UPDATE);
     kgsl_intr_detach(&device->intr, GSL_INTR_YDX_RBBM_GUI_IDLE);
-#if defined GSL_RB_TIMESTAMP_INTERUPT	
+#if defined GSL_RB_TIMESTAMP_INTERUPT
     kgsl_intr_detach(&device->intr, GSL_INTR_YDX_CP_RING_BUFFER);
 #endif
 
@@ -597,6 +639,7 @@ kgsl_yamato_setproperty(gsl_device_t *device, gsl_property_type_t type, void *va
             }
             else
             {
+            	    printk(KERN_INFO "@MF@ set power state flags=%x value=%d\n", power->flags, power->value);
                 kgsl_hal_setpowerstate(device->id, power->flags, power->value);
             }
         }
@@ -719,7 +762,7 @@ kgsl_yamato_setproperty(gsl_device_t *device, gsl_property_type_t type, void *va
                             gsl_driver.dmi_frame = 0;
                             break;
                     }
-                    
+
                     // issue the commands
                     kgsl_ringbuffer_issuecmds(device, 1, &cmdbuf[0], size, GSL_CALLER_PROCESSID_GET());
 
@@ -744,12 +787,15 @@ kgsl_yamato_idle(gsl_device_t *device, unsigned int timeout)
     int               status  = GSL_FAILURE;
     gsl_ringbuffer_t  *rb     = &device->ringbuffer;
     rbbm_status_u     rbbm_status;
+    unsigned long __t;
 
     (void) timeout;      // unreferenced formal parameter
 
     KGSL_DEBUG(GSL_DBGFLAGS_DUMPX, KGSL_DEBUG_DUMPX(BB_DUMP_REGPOLL, device->id, mmRBBM_STATUS, 0x80000000, "kgsl_yamato_idle"));
 
     GSL_RB_MUTEX_LOCK();
+
+     __t = jiffies + msecs_to_jiffies(5000);
 
     // first, wait until the CP has consumed all the commands in the ring buffer
     if (rb->flags & GSL_FLAGS_STARTED)
@@ -758,11 +804,19 @@ kgsl_yamato_idle(gsl_device_t *device, unsigned int timeout)
         {
             GSL_RB_GET_READPTR(rb, &rb->rptr);
 
-        } while (rb->rptr != rb->wptr);
+        } while ((rb->rptr != rb->wptr) && time_before(jiffies, __t));
+
+        if (rb->rptr != rb->wptr) {
+	    WARN(1, "@MF@ timeout waiting for CP\n");
+    	    mf_dump_state(device);
+	    GSL_RB_MUTEX_UNLOCK();
+	    return status;
+	}
     }
 
+
     // now, wait for the GPU to finish its operations
-    for ( ; ; )
+    for (__t = jiffies + msecs_to_jiffies(5000) ; time_before(jiffies, __t); )
     {
         device->ftbl.device_regread(device, mmRBBM_STATUS, (unsigned int *)&rbbm_status);
 
@@ -773,7 +827,12 @@ kgsl_yamato_idle(gsl_device_t *device, unsigned int timeout)
         }
 
     }
-	
+
+    if (status != GSL_SUCCESS) {
+    	    printk(KERN_ERR "@MF@ %s : %d\n", __func__, status);
+    	    mf_dump_state(device);
+    }
+    WARN(status != GSL_SUCCESS, "timeout waiting for GPU IDLE rbbm status=%08x\n", rbbm_status.val);
     GSL_RB_MUTEX_UNLOCK();
 
     return (status);
@@ -803,9 +862,21 @@ kgsl_yamato_regread(gsl_device_t *device, unsigned int offsetwords, unsigned int
 
 //----------------------------------------------------------------------------
 
+static int mf_dump_regs = 0;
+
+void mf_enable_regdump(int enable)
+{
+	mf_dump_regs = enable;
+}
+
 int
 kgsl_yamato_regwrite(gsl_device_t *device, unsigned int offsetwords, unsigned int value)
 {
+    struct device *linux_dev = gsl_driver.osdep_dev;
+
+    if (mf_dump_regs) {
+    	    printk(KERN_INFO "@MF@ REGWRITE %04x => %08x\n", offsetwords, value);
+    }
     KGSL_DEBUG(GSL_DBGFLAGS_PM4, KGSL_DEBUG_DUMPREGWRITE(offsetwords, value));
 
     GSL_HAL_REG_WRITE(device->id, (unsigned int) device->regspace.mmio_virt_base, offsetwords, value);
