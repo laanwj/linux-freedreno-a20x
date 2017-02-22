@@ -20,12 +20,14 @@
 /*
  * Copyright (C) 2010-2011 Freescale Semiconductor, Inc. All Rights Reserved.
  */
+#define GSL_HAL_DEBUG /* MF */
 
 #include "gsl_hal.h"
 #include "gsl_halconfig.h"
 #include "gsl_linux_map.h"
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/vmalloc.h>
@@ -551,6 +553,8 @@ KGSLHAL_API int kgsl_clock(gsl_deviceid_t dev, int enable)
 			clk_disable_unprepare(emi_garb_clk);
 		}
 	}
+
+	//printk(KERN_INFO "@MF@ GPU CLK %d cur=%d\n", enable, __clk_is_enabled(gpu_clk));
 
 	return GSL_SUCCESS;
 }
