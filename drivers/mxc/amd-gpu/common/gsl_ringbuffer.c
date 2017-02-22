@@ -175,7 +175,7 @@ kgsl_ringbuffer_checkregister(unsigned int reg, int pmodecheck)
 		}
 	}
 
-	// range check register offset 
+	// range check register offset
 	if (reg > (gsl_driver.device[GSL_DEVICE_YAMATO-1].regspace.sizebytes >> 2))
 	{
 		kgsl_log_write( KGSL_LOG_GROUP_MEMORY | KGSL_LOG_LEVEL_ERROR, "ERROR: Register out of range.\n" );
@@ -350,7 +350,7 @@ kgsl_ringbuffer_submit(gsl_ringbuffer_t *rb)
     KOS_ASSERT(rb->wptr != 0);
 
     kgsl_device_active(rb->device);
-    
+
     GSL_RB_UPDATE_WPTR_POLLING(rb);
 
     // send the wptr to the hw
@@ -472,6 +472,8 @@ kgsl_ringbuffer_addcmds(gsl_ringbuffer_t *rb, unsigned int numcmds)
 }
 
 //----------------------------------------------------------------------------
+int mf_enable_regdump(int enable);
+
 int
 kgsl_ringbuffer_start(gsl_ringbuffer_t *rb)
 {
@@ -563,6 +565,7 @@ kgsl_ringbuffer_start(gsl_ringbuffer_t *rb)
     // clear ME_HALT to start micro engine
     device->ftbl.device_regwrite(device, mmCP_ME_CNTL, 0);
 
+    mf_enable_regdump(0);
     // ME_INIT
     cmds  = kgsl_ringbuffer_addcmds(rb, 19);
 
@@ -588,6 +591,7 @@ kgsl_ringbuffer_start(gsl_ringbuffer_t *rb)
 
     KGSL_DEBUG(GSL_DBGFLAGS_PM4CHECK, kgsl_ringbuffer_checkpm4((unsigned int *)rb->buffer_desc.hostptr, 19, 1));
     KGSL_DEBUG(GSL_DBGFLAGS_PM4, KGSL_DEBUG_DUMPPM4((unsigned int *)rb->buffer_desc.hostptr, 19));
+
 
     kgsl_ringbuffer_submit(rb);
 
@@ -682,6 +686,7 @@ kgsl_ringbuffer_init(gsl_device_t *device)
     status = kgsl_sharedmem_alloc0(device->id, flags, (rb->sizedwords << 2), &rb->buffer_desc);
 
     KGSL_DEBUG(GSL_DBGFLAGS_DUMPX, KGSL_DEBUG_DUMPX(BB_DUMP_RINGBUF_SET, (unsigned int)rb->buffer_desc.gpuaddr, (unsigned int)rb->buffer_desc.hostptr, 0, "kgsl_ringbuffer_init"));
+    printk(KERN_INFO "@MF@ %s: host=%08x gpu=%08x\n",  rb->buffer_desc.hostptr, rb->buffer_desc.gpuaddr);
 
     if (status != GSL_SUCCESS)
     {
@@ -797,7 +802,7 @@ kgsl_ringbuffer_issuecmds(gsl_device_t *device, int pmodeoff, unsigned int *cmds
 
 #if defined GSL_RB_TIMESTAMP_INTERUPT
     pmodesizedwords += 2;
-#endif        
+#endif
     // allocate space in ringbuffer
     ringcmds = kgsl_ringbuffer_addcmds(rb, pmodesizedwords + sizedwords + 6);
 
@@ -837,7 +842,7 @@ kgsl_ringbuffer_issuecmds(gsl_device_t *device, int pmodeoff, unsigned int *cmds
     *ringcmds++ = device->memstore.gpuaddr + GSL_DEVICE_MEMSTORE_OFFSET(eoptimestamp);
     *ringcmds++ = rb->timestamp;
 
-#if defined GSL_RB_TIMESTAMP_INTERUPT    
+#if defined GSL_RB_TIMESTAMP_INTERUPT
     *ringcmds++ = pm4_type3_packet(PM4_INTERRUPT, 1);
     *ringcmds++ = 0x80000000;
 #endif

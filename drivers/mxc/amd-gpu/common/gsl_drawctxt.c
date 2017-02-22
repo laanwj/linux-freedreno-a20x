@@ -1437,7 +1437,7 @@ kgsl_drawctxt_create(gsl_device_t* device, gsl_context_type_t type, unsigned int
     ctx_t           ctx;
 
     kgsl_device_active(device);
-    
+
     GSL_CONTEXT_MUTEX_LOCK();
     if (device->drawctxt_count >= GSL_CONTEXT_MAX)
     {
@@ -1499,6 +1499,7 @@ kgsl_drawctxt_create(gsl_device_t* device, gsl_context_type_t type, unsigned int
     }
 
     *drawctxt_id = index;
+    printk(KERN_INFO "@MF@ %s ctx=%d\n", __func__, *drawctxt_id);
 
     GSL_CONTEXT_MUTEX_UNLOCK();
     return (GSL_SUCCESS);
@@ -1587,7 +1588,9 @@ KGSL_API int kgsl_drawctxt_bind_gmem_shadow(gsl_deviceid_t device_id, unsigned i
     GSL_API_MUTEX_LOCK();
     GSL_CONTEXT_MUTEX_LOCK();
 
-	if( !shadow_buffer->enabled )
+    printk(KERN_INFO "@MF@ %s ctx=%d enabled=%d\n", __func__, drawctxt_id, shadow_buffer->enabled);
+
+    if( !shadow_buffer->enabled )
     {
         // Disable shadow
         shadow->gmemshadow.size = 0;
@@ -1653,6 +1656,7 @@ KGSL_API int kgsl_drawctxt_bind_gmem_shadow(gsl_deviceid_t device_id, unsigned i
         if( drawctxt->user_gmem_shadow[i].gmemshadow.size > 0 )
         {
             drawctxt->flags |= CTXT_FLAGS_GMEM_SHADOW;
+            printk(KERN_INFO "@MF@ enable shadow for user buffer %d\n", i);
         }
     }
 

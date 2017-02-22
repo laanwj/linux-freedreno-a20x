@@ -870,6 +870,12 @@ kgsl_sharedmem_convertaddr(unsigned int addr, int type)
     unsigned int     gpubaseaddr, hostbaseaddr, sizebytes;
     int              i;
 
+    // MF hack
+    if (type == 0 && (gsl_driver.enable_mmu && (addr < GSL_LINUX_MAP_RANGE_END) && (addr >= GSL_LINUX_MAP_RANGE_START))) {
+    	    return (unsigned int)gsl_linux_find_kaddr(addr);
+    }
+
+
     if ((shmem->flags & GSL_FLAGS_INITIALIZED))
     {
         for (i = 0; i < shmem->numapertures; i++)

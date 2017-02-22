@@ -16,7 +16,7 @@
  * 02110-1301, USA.
  *
  */
- 
+
 #include "gsl_types.h"
 #include "gsl.h"
 #include "gsl_buildconfig.h"
@@ -42,6 +42,9 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #endif
+
+#include <linux/debugfs.h>
+#include <linux/io.h>
 
 #include "mxc_gpu.h"
 
@@ -95,6 +98,105 @@ static ssize_t gsl_kmod_read(struct file *fd, char __user *buf, size_t len, loff
 static ssize_t gsl_kmod_write(struct file *fd, const char __user *buf, size_t len, loff_t *ptr)
 {
     return 0;
+}
+
+
+static void mf_dump_vertex_bufs(u32 *cmd_buf, u32 cmd_dwords, u32 *already, int *nb_already, const char *owner)
+{
+	int i, j;
+	char hdr[50];
+
+	for (i=0; i<cmd_dwords; i++) {
+		if ((cmd_buf[i] == 0xc0062d00 || cmd_buf[i] == 0xc0022d00) &&
+			(cmd_buf[i+1] == 0x00010078 || cmd_buf[i+1] == 0x0001009c)) {
+			u32 gpu_addr = cmd_buf[i+2];
+			u32 len = cmd_buf[i+3];
+			u32 *vtx_buf;
+			bool duplicate = false;
+
+			i+= 7;
+
+			for (j=0; j < *nb_already; j++) {
+				if (gpu_addr == already[j]) {
+					duplicate = true;
+					break;
+				}
+			}
+			if (duplicate)
+				break;
+			already[*nb_already] = gpu_addr;
+			*nb_already += 1;
+
+			vtx_buf = (u32 *)kgsl_sharedmem_convertaddr(gpu_addr & ~0x3, 0);
+
+			printk(KERN_INFO "@MF@ dumping vertex buf gpu=%08x host=%p\n", gpu_addr, vtx_buf);
+
+			snprintf(hdr, sizeof(hdr), "VTX: %08x (%s) > ", gpu_addr, owner);
+			print_hex_dump(KERN_INFO, hdr, DUMP_PREFIX_OFFSET, 16, 4,
+					vtx_buf, len, false);
+		}
+	}
+}
+
+static void mf_dump_drawindx_buf(u32 *cmd_buf, u32 cmd_dwords)
+{
+	int i;
+
+	for (i=0; i<cmd_dwords; i++) {
+		u32 gpu_addr;
+		u32 *buf;
+
+		if (cmd_buf[i] != 0xc0032200)
+			continue;
+
+		gpu_addr = cmd_buf[i+3];
+
+		printk(KERN_INFO "@MF@ found long form DRAW_INDX addr=%08x\n", gpu_addr);
+
+		buf = (u32 *)kgsl_sharedmem_convertaddr(gpu_addr, 0);
+		print_hex_dump(KERN_INFO, "DRAW_INDX ", DUMP_PREFIX_OFFSET, 16, 4, buf, 64, false);
+	}
+}
+
+static void mf_patch_ib(u32 *cmd_buf, u32 cmd_dwords)
+{
+#if 0
+	int i, j;
+
+	for (i=0; i<cmd_dwords; i++) {
+		char *reason = NULL;
+
+		switch(cmd_buf[i] & 0xff00ff00) {
+		case 0xc0003400:
+			reason = "CP_DRAW_INDX_BIN";
+			break;
+		case 0xc0004b00:
+			reason = "CP_SET_DRAW_INIT_FLAGS";
+			break;
+
+		case 0xc0002d00:
+			switch(cmd_buf[i+1]) {
+			case 0x00040203:
+				reason = "CP_SET_CONSTANT(VGT_CURRENT_BIN_ID_MAX)";
+				break;
+			case 0x00040207:
+				reason = "CP_SET_CONSTANT(VGT_CURRENT_BIN_ID_MIN)";
+				break;
+			}
+			break;
+		}
+
+		if (reason) {
+			int zcnt = ((cmd_buf[i] >> 16) & 0xff) + 1;
+
+			printk(KERN_INFO "@MF@ nopping %s @%x\n", reason, (i*4));
+
+			for (j=0; j<= zcnt; j++)
+			    cmd_buf[i+j] = 0x80000000;
+			i += zcnt;
+		}
+	}
+#endif
 }
 
 static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
@@ -265,21 +367,108 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
         {
             kgsl_cmdstream_issueibcmds_t param;
             gsl_timestamp_t tmp;
+
             if (copy_from_user(&param, (void __user *)arg, sizeof(kgsl_cmdstream_issueibcmds_t)))
             {
                 printk(KERN_ERR "%s: copy_from_user error\n", __func__);
                 kgslStatus = GSL_FAILURE;
                 break;
             }
+
+            {
+            	    u32 *mf_buf;
+            	    char hdr[50];
+            	    u32 subs[10];
+            	    u32 vbufs[10];
+            	    u32 vbuf_cnt = 0;
+            	    int sub_cnt = 0;
+            	    static int ib_idx = 0;
+            	    int i, j;
+
+#if 0
+            	    if (param.sizedwords == 999)
+            	    	    param.sizedwords = 342;
+#endif
+
+            	    mf_buf = (u32 *)kgsl_sharedmem_convertaddr(param.ibaddr, 0);
+		    mf_patch_ib(mf_buf, param.sizedwords);
+
+            	    snprintf(hdr, sizeof(hdr), "@MF@ ib=%d ic=%d >", ib_idx, param.drawctxt_index);
+            	    printk(KERN_INFO "@MF@ dumping IB gpu=%08x host=%p hdr='%s'\n",
+            	    	    param.ibaddr, mf_buf, hdr);
+
+            	    print_hex_dump(KERN_INFO, hdr, DUMP_PREFIX_OFFSET, 32, 4,
+				mf_buf,
+				param.sizedwords * 4, false);
+
+		    mf_dump_drawindx_buf(mf_buf, param.sizedwords);
+		    mf_dump_vertex_bufs(mf_buf, param.sizedwords, vbufs, &vbuf_cnt, hdr);
+
+		    for (i=0; i<param.sizedwords; i++) {
+		    	    if (mf_buf[i] == 0xc0004b00) { /* CP_SET_DRAW_INIT_FLAGS */
+		    	    	    u32 *init_buf;
+		    	    	    u32 init_addr;
+
+		    	    	    init_addr = mf_buf[i+1];
+
+		    	    	    if (init_addr) {
+					    printk(KERN_INFO "@MF@ contents of CP_SET_DRAW_INIT_FLAGS @%08x:\n", init_addr);
+					    init_buf = (u32 *)kgsl_sharedmem_convertaddr(init_addr, 0);
+					    print_hex_dump(KERN_INFO, "INIT_BUF ", DUMP_PREFIX_OFFSET, 32, 4,
+								init_buf,
+								64, false);
+
+					    //mf_buf[++i] = 0;
+				    }
+		    	    	    continue;
+		    	    }
+
+		    	    if (mf_buf[i] == 0xc0013700) {
+		    	    	    u32 *sub_buf;
+		    	    	    u32 sub_gpu, sub_len;
+		    	    	    bool duplicate = false;
+
+		    	    	    sub_gpu = mf_buf[++i];
+		    	    	    sub_len = mf_buf[++i];
+
+		    	    	    for (j=0; j < sub_cnt; j++) {
+		    	    	    	    if (subs[j] == sub_gpu) {
+		    	    	    		duplicate = true;
+		    	    	    		break;
+		    	    	    	    }
+		    	    	    }
+		    	    	    if (duplicate)
+		    	    	    	    break;
+		    	    	    subs[sub_cnt++] = sub_gpu;
+
+		    	    	    sub_buf = (u32 *)kgsl_sharedmem_convertaddr(sub_gpu, 0);
+				    mf_patch_ib(sub_buf, sub_len);
+
+		    	    	    printk(KERN_INFO "@MF@ dumping sub IB gpu=%08x host=%p\n",
+		    	    	    	    sub_gpu, sub_buf);
+
+		    	    	    snprintf(hdr, sizeof(hdr), "@MF@ ib=%d sub=%08x >", ib_idx, sub_gpu);
+		    	    	    print_hex_dump(KERN_INFO, hdr, DUMP_PREFIX_OFFSET, 32, 4,
+		    	    	    	    		sub_buf, sub_len * 4, false);
+
+		    	    	    mf_dump_drawindx_buf(sub_buf, sub_len);
+    	    	    		    mf_dump_vertex_bufs(sub_buf, sub_len, vbufs, &vbuf_cnt, hdr);
+		    	    }
+		    }
+		    ib_idx++;
+            }
             kgslStatus = kgsl_cmdstream_issueibcmds(param.device_id, param.drawctxt_index, param.ibaddr, param.sizedwords, &tmp, param.flags);
             if (kgslStatus == GSL_SUCCESS)
             {
+            	printk(KERN_INFO "@MF@ SUBMIT DONE OK ts=%d flags=%08x\n", tmp, param.flags);
                 if (copy_to_user(param.timestamp, &tmp, sizeof(gsl_timestamp_t)))
                 {
-                    printk(KERN_ERR "%s: copy_to_user error\n", __func__);
+                    printk(KERN_ERR "%s: copy_to_user error ts=%p\n", __func__, param.timestamp);
                     kgslStatus = GSL_FAILURE;
                     break;
                 }
+            } else {
+            	    printk(KERN_ERR "@MF@ kgsl_cmdstream_issueibcmds FAILED (%d)\n", kgslStatus);
             }
             break;
         }
@@ -301,6 +490,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                     break;
             }
             kgslStatus = GSL_SUCCESS;
+            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_READTIMESTAMP ts=%d\n", tmp);
             break;
         }
     case IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP:
@@ -313,11 +503,16 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 kgslStatus = GSL_FAILURE;
                 break;
             }
+
+            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP gpuaddr=%08x ts=%d\n",
+            	    param.memdesc->gpuaddr,
+            	    param.timestamp);
+
             err = del_memblock_from_allocated_list(fd, param.memdesc);
             if(err)
             {
-                /* tried to remove a block of memory that is not allocated! 
-                 * NOTE that -EINVAL is Linux kernel's error codes! 
+                /* tried to remove a block of memory that is not allocated!
+                 * NOTE that -EINVAL is Linux kernel's error codes!
                  * the drivers error codes COULD mix up with kernel's. */
                 kgslStatus = -EINVAL;
             }
@@ -340,6 +535,8 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_cmdstream_waittimestamp(param.device_id, param.timestamp, param.timeout);
+            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_WAITTIMESTAMP ts=%d to=%d st=%d\n",
+            	    param.timestamp, param.timeout, kgslStatus);
             break;
         }
     case IOCTL_KGSL_CMDWINDOW_WRITE:
@@ -367,13 +564,16 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_context_create(param.device_id, param.type, &tmp, param.flags);
+            printk(KERN_INFO "@MF@ IOCTL_KGSL_CONTEXT_CREATE device=%d type=0x%x flags=0x%x\n",
+            	    param.device_id, param.type, param.flags);
+
             if (kgslStatus == GSL_SUCCESS)
             {
                 if (copy_to_user(param.drawctxt_id, &tmp, sizeof(unsigned int)))
                 {
                     tmpStatus = kgsl_context_destroy(param.device_id, tmp);
                     /* is asserting ok? Basicly we should return the error from copy_to_user
-                     * but will the user space interpret it correctly? Will the user space 
+                     * but will the user space interpret it correctly? Will the user space
                      * always check against GSL_SUCCESS  or GSL_FAILURE as they are not the only
                      * return values.
                      */
@@ -438,6 +638,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 }
                 else
                 {
+                    printk(KERN_INFO "@MF@  alloc %x flags=%x => gpu=%x\n", param.sizebytes, param.flags, tmp.gpuaddr);
                     add_memblock_to_allocated_list(fd, &tmp);
                 }
 	    } else {
@@ -525,7 +726,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
             {
                 printk(KERN_ERR "%s: kgsl_sharedmem_write failed\n", __func__);
             }
-            
+
             break;
         }
     case IOCTL_KGSL_SHAREDMEM_SET:
@@ -626,7 +827,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
             kgslStatus = GSL_SUCCESS;
             break;
         }
-    
+
     case IOCTL_KGSL_DEVICE_CLOCK:
         {
             kgsl_device_clock_t param;
@@ -656,6 +857,8 @@ static int gsl_kmod_mmap(struct file *fd, struct vm_area_struct *vma)
     unsigned long prot = pgprot_writecombine(vma->vm_page_prot);
     unsigned long addr = vma->vm_pgoff << PAGE_SHIFT;
 
+    printk(KERN_INFO "@MF@ %s(%08x size=%08x\n", __func__, addr, size);
+
     if (gsl_driver.enable_mmu && (addr < GSL_LINUX_MAP_RANGE_END) && (addr >= GSL_LINUX_MAP_RANGE_START)) {
 	vma->vm_pgoff = 0;
 	status = gsl_linux_map_mmap(addr, vma, size);
@@ -675,12 +878,16 @@ static int gsl_kmod_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
     return VM_FAULT_SIGBUS;
 }
 
+static struct platform_device *mf_plat_dev;
+static int imxgpu_clear_gmem(struct platform_device *dev);
+
 static int gsl_kmod_open(struct inode *inode, struct file *fd)
 {
     gsl_flags_t flags = 0;
     struct gsl_kmod_per_fd_data *datp;
     int err = 0;
 
+    printk(KERN_INFO "@MF@ %s\n", __func__);
     if(mutex_lock_interruptible(&gsl_mutex))
     {
         return -EINTR;
@@ -709,6 +916,8 @@ static int gsl_kmod_open(struct inode *inode, struct file *fd)
             err = -ENOMEM;
         }
     }
+
+    imxgpu_clear_gmem(mf_plat_dev);
 
     mutex_unlock(&gsl_mutex);
 
@@ -757,6 +966,7 @@ static irqreturn_t z160_irq_handler(int irq, void *dev_id)
 
 static irqreturn_t z430_irq_handler(int irq, void *dev_id)
 {
+	printk(KERN_INFO "@MF@ kgsl 3D IRQ\n");
     kgsl_intr_isr(&gsl_driver.device[GSL_DEVICE_YAMATO-1]);
     return IRQ_HANDLED;
 }
@@ -786,6 +996,159 @@ static struct mxc_gpu_platform_data* gpu_parse_dt(struct device *dev)
 	return NULL;
 }
 #endif
+
+struct imxgpu_gmem_ctx {
+	struct platform_device *dev;
+	struct resource	*res;
+	void __iomem 	*gmem;
+};
+
+static struct imxgpu_gmem_ctx *imxgpu_gmem_open(struct platform_device *dev)
+{
+	struct 	imxgpu_gmem_ctx *ctx;
+	int ret;
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return ERR_PTR(-ENOMEM);
+
+	ctx->res = platform_get_resource_byname(dev, IORESOURCE_MEM, "gpu_graphics_mem");
+	if (!ctx->res) {
+		dev_err(&dev->dev, "No gmem defined in DT %p '%s'\n", dev, dev->name);
+		ret = -ENODEV;
+		goto out_err;
+	}
+	ctx->gmem = ioremap_nocache(ctx->res->start, resource_size(ctx->res));
+	if (!ctx->gmem) {
+		dev_err(&dev->dev, "Unable to map gmem\n");
+		ret = -ENOMEM;
+		goto out_err;
+	}
+
+	ctx->dev = dev;
+
+	dev_info(&dev->dev, "@MF@ mapped gmem %08x len=%08x\n", ctx->res->start, resource_size(ctx->res));
+	kgsl_clock(GSL_DEVICE_YAMATO, 1);
+
+	return ctx;
+
+out_err:
+	kfree(ctx);
+
+	return ERR_PTR(ret);
+}
+
+static void imxgpu_gmem_close(struct imxgpu_gmem_ctx *ctx)
+{
+	dev_info(&ctx->dev->dev, "@MF@ unmapping GEMEM\n");
+	iounmap(ctx->gmem);
+	kfree(ctx);
+
+	kgsl_clock(GSL_DEVICE_YAMATO, 0);
+}
+
+static int gmem_open(struct inode *inode, struct file *file)
+{
+	struct platform_device *dev = inode->i_private;
+	struct imxgpu_gmem_ctx *ctx;
+
+	ctx = imxgpu_gmem_open(dev);
+	if (IS_ERR(ctx))
+		return PTR_ERR(ctx);
+
+	file->private_data = ctx;
+
+	return 0;
+}
+
+static int gmem_release(struct inode *inode, struct file *file)
+{
+	struct imxgpu_gmem_ctx *ctx = file->private_data;
+
+	imxgpu_gmem_close(ctx);
+
+	return 0;
+}
+
+static ssize_t gmem_read(struct file *file, char __user *user_buf,
+			       size_t count, loff_t *ppos)
+{
+	struct imxgpu_gmem_ctx *ctx = file->private_data;
+	loff_t pos = *ppos;
+	u32 val;
+	unsigned long remain;
+	size_t i;
+
+	printk(KERN_INFO "@MF@ %s pos=%ld\n", __func__, (long)pos);
+
+	if (pos < 0)
+		return -EINVAL;
+
+	if (pos >= resource_size(ctx->res))
+		return 0;
+
+	if (count > resource_size(ctx->res) - pos)
+		count = resource_size(ctx->res) - pos;
+
+	count &= ~3;
+
+	for (i=0; i < count; i += sizeof(val)) {
+		val = readl(ctx->gmem + pos);
+		remain = copy_to_user(user_buf, &val, sizeof(val));
+		if (remain)
+			return -EFAULT;
+		user_buf += sizeof(val);
+		pos += sizeof(val);
+	}
+
+	*ppos = pos;
+
+	return count;
+}
+
+static const struct file_operations fops_gmem = {
+	.open		= gmem_open,
+	.release	= gmem_release,
+	.read		= gmem_read,
+	.llseek		= default_llseek,
+};
+
+
+static int imxgpu_debugfs_gmem_init(struct platform_device *dev)
+{
+	struct dentry *dentry, *dir;
+
+	dir = debugfs_create_dir("kgsl", NULL);
+	if (!dir)
+		return -ENODEV;
+
+	dentry = debugfs_create_file("gmem", S_IRUGO,
+					dir,
+					dev, &fops_gmem);
+
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	return 0;
+}
+
+static int imxgpu_clear_gmem(struct platform_device *dev)
+{
+	struct imxgpu_gmem_ctx *ctx;
+	int i;
+
+	ctx = imxgpu_gmem_open(dev);
+	if (IS_ERR(ctx))
+		return PTR_ERR(ctx);
+
+	for (i=0; i < resource_size(ctx->res); i += 4)
+		writel(0, ctx->gmem + i);
+
+	imxgpu_gmem_close(ctx);
+
+	return 0;
+}
+
 
 static int gpu_probe(struct platform_device *pdev)
 {
@@ -895,6 +1258,10 @@ static int gpu_probe(struct platform_device *pdev)
     if (!IS_ERR(dev))
     {
     //    gsl_kmod_data.device = dev;
+    	mf_plat_dev = pdev;
+    	imxgpu_clear_gmem(pdev);
+    	imxgpu_debugfs_gmem_init(pdev);
+
         return 0;
     }
 
@@ -952,7 +1319,7 @@ static int gpu_suspend(struct platform_device *pdev, pm_message_t state)
                         GSL_PROP_DEVICE_POWER,
                         &power,
                         sizeof(gsl_powerprop_t));
-    }   
+    }
 
     return 0;
 }
@@ -970,7 +1337,7 @@ static int gpu_resume(struct platform_device *pdev)
                         GSL_PROP_DEVICE_POWER,
                         &power,
                         sizeof(gsl_powerprop_t));
-    }   
+    }
 
     return 0;
 }
