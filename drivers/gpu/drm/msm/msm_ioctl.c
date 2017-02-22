@@ -11,6 +11,8 @@ static int msm_ioctl_get_param(struct drm_device *dev, void *data,
 	struct drm_msm_param *args = data;
 	struct msm_gpu *gpu;
 
+	printk(KERN_INFO "@MF@ %s gpu=%p\n", __func__, priv->gpu);
+
 	/* for now, we just have 3d pipe.. eventually this would need to
 	 * be more clever to dispatch to appropriate gpu module:
 	 */
@@ -29,14 +31,20 @@ static int msm_ioctl_gem_new(struct drm_device *dev, void *data,
 		struct drm_file *file)
 {
 	struct drm_msm_gem_new *args = data;
+	int ret;
 
 	if (args->flags & ~MSM_BO_FLAGS) {
 		DRM_ERROR("invalid flags: %08x\n", args->flags);
 		return -EINVAL;
 	}
 
-	return msm_gem_new_handle(dev, file, args->size,
+	ret = msm_gem_new_handle(dev, file, args->size,
 			args->flags, &args->handle);
+
+	printk(KERN_INFO "@MF@ %s flags=%x size=%llx handle=%u\n", __func__,
+		args->flags, args->size, args->handle);
+
+	return ret;
 }
 
 #define TS(t) ((struct timespec){ .tv_sec = (t).tv_sec, .tv_nsec = (t).tv_nsec })

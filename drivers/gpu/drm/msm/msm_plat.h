@@ -55,6 +55,8 @@ struct msm_plat_private {
 		 */
 		struct drm_mm mm;
 	} vram;
+
+	struct dentry *gmem_debugfs;
 };
 
 int msm_register_mmu(struct drm_device *dev, struct msm_mmu *mmu);

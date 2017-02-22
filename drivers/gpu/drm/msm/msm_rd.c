@@ -136,6 +136,7 @@ static ssize_t rd_read(struct file *file, char __user *buf,
 
 	ret = wait_event_interruptible(rd->fifo_event,
 			circ_count(&rd->fifo) > 0);
+
 	if (ret)
 		goto out;
 
@@ -153,6 +154,7 @@ out:
 	mutex_unlock(&rd->read_lock);
 	if (ret)
 		return ret;
+
 	return n;
 }
 

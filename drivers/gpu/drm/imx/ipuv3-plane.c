@@ -72,6 +72,9 @@ int ipu_plane_set_base(struct ipu_plane *ipu_plane, struct drm_framebuffer *fb,
 		return -EFAULT;
 	}
 
+	printk(KERN_INFO "@MF@ %s: phys = %pad, x = %d, y = %d", __func__,
+		&cma_obj->paddr, x, y);
+
 	dev_dbg(ipu_plane->base.dev->dev, "phys = %pad, x = %d, y = %d",
 		&cma_obj->paddr, x, y);
 

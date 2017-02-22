@@ -51,6 +51,8 @@ struct imx_drm_device {
 	struct imx_drm_crtc			*crtc[MAX_CRTC];
 	int					pipes;
 	struct drm_fbdev_cma			*fbhelper;
+
+	struct dentry				*gmem_debugfs;
 };
 
 struct imx_drm_crtc {
@@ -264,6 +266,12 @@ static int imx_drm_driver_load(struct drm_device *drm, unsigned long flags)
 	imxdrm->drm = drm;
 
 	drm->dev_private = imxdrm;
+
+#ifdef CONFIG_DRM_IMX_ADRENO
+	ret = imxgpu_load(drm);
+	if (ret)
+		return ret;
+#endif
 
 	/*
 	 * enable drm irq mode.
@@ -542,28 +550,49 @@ EXPORT_SYMBOL_GPL(imx_drm_encoder_get_mux_id);
 static const struct drm_ioctl_desc imx_drm_ioctls[] = {
 };
 
+#ifdef CONFIG_DRM_IMX_ADRENO
+static const struct vm_operations_struct vm_ops = {
+	.fault = msm_gem_fault,
+	.open = drm_gem_vm_open,
+	.close = drm_gem_vm_close,
+};
+#endif
+
 static struct drm_driver imx_drm_driver = {
-	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME,
+	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_PRIME | DRIVER_RENDER,
 	.load			= imx_drm_driver_load,
 	.unload			= imx_drm_driver_unload,
 	.lastclose		= imx_drm_driver_lastclose,
 	.preclose		= imx_drm_driver_preclose,
 	.set_busid		= drm_platform_set_busid,
+
+#ifdef CONFIG_DRM_IMX_ADRENO
+	.gem_free_object	= msm_gem_free_object,
+	.gem_vm_ops		= &vm_ops,
+	.gem_prime_pin      	= msm_gem_prime_pin,
+	.gem_prime_unpin    	= msm_gem_prime_unpin,
+	.gem_prime_get_sg_table	= msm_gem_prime_get_sg_table,
+	.gem_prime_import_sg_table = msm_gem_prime_import_sg_table,
+	.gem_prime_vmap		= msm_gem_prime_vmap,
+	.gem_prime_vunmap	= msm_gem_prime_vunmap,
+	.gem_prime_mmap		= msm_gem_prime_mmap,
+#else
 	.gem_free_object	= drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
-	.dumb_create		= drm_gem_cma_dumb_create,
-	.dumb_map_offset	= drm_gem_cma_dumb_map_offset,
-	.dumb_destroy		= drm_gem_dumb_destroy,
-
-	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
-	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
-	.gem_prime_import	= drm_gem_prime_import,
-	.gem_prime_export	= drm_gem_prime_export,
 	.gem_prime_get_sg_table	= drm_gem_cma_prime_get_sg_table,
 	.gem_prime_import_sg_table = drm_gem_cma_prime_import_sg_table,
 	.gem_prime_vmap		= drm_gem_cma_prime_vmap,
 	.gem_prime_vunmap	= drm_gem_cma_prime_vunmap,
 	.gem_prime_mmap		= drm_gem_cma_prime_mmap,
+#endif
+	.dumb_create		= drm_gem_cma_dumb_create,
+	.dumb_map_offset	= drm_gem_cma_dumb_map_offset,
+	.dumb_destroy		= drm_gem_dumb_destroy,
+	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
+	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
+	.gem_prime_import	= drm_gem_prime_import,
+	.gem_prime_export	= drm_gem_prime_export,
+
 	.get_vblank_counter	= drm_vblank_count,
 	.enable_vblank		= imx_drm_enable_vblank,
 	.disable_vblank		= imx_drm_disable_vblank,
@@ -571,6 +600,11 @@ static struct drm_driver imx_drm_driver = {
 	.open			= imxgpu_open,
 	.ioctls			= msm_drm_ioctls,
 	.num_ioctls		= ARRAY_SIZE(msm_drm_ioctls),
+#ifdef CONFIG_DEBUG_FS
+	.debugfs_init       	= imxgpu_debugfs_init,
+	.debugfs_cleanup    	= imxgpu_debugfs_cleanup,
+#endif
+
 #else
 	.ioctls			= imx_drm_ioctls,
 	.num_ioctls		= ARRAY_SIZE(imx_drm_ioctls),
@@ -662,6 +696,7 @@ static int imx_drm_platform_probe(struct platform_device *pdev)
 		of_node_put(port);
 	}
 
+#ifdef CONFIG_DRM_IMX_ADRENO
 	for (i = 0; ; i++) {
 		port = of_parse_phandle(pdev->dev.of_node, "gpus", i);
 		if (!port)
@@ -670,6 +705,7 @@ static int imx_drm_platform_probe(struct platform_device *pdev)
 		printk(KERN_INFO "@MF@ adding gpu %d\n", i);
 		component_match_add(&pdev->dev, &match, compare_of, port);
 	}
+#endif
 
 	ret = dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(32));
 	if (ret)

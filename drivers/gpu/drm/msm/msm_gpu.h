@@ -140,8 +140,12 @@ struct msm_gpu_perfcntr {
 	const char *name;
 };
 
+extern int mf_adreno_dump_regs;
+
 static inline void gpu_write(struct msm_gpu *gpu, u32 reg, u32 data)
 {
+	if (mf_adreno_dump_regs)
+		printk(KERN_INFO "@MF@ REGWRITE %04x => %08x\n", reg, data);
 	msm_writel(data, gpu->mmio + (reg << 2));
 }
 

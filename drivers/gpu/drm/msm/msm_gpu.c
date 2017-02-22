@@ -21,6 +21,12 @@
 #include "msm_mmu.h"
 #include "msm_plat.h"
 
+int mf_adreno_dump_regs = 0;
+void mf_adreno_enable_regdump(int enable)
+{
+	mf_adreno_dump_regs = enable;
+}
+
 /*
  * Power Management:
  */
@@ -228,8 +234,12 @@ static void inactive_worker(struct work_struct *work)
 	DBG("%s: inactive!\n", gpu->name);
 	mutex_lock(&dev->struct_mutex);
 	if (!(msm_gpu_active(gpu) || gpu->inactive)) {
+#if 0
 		disable_axi(gpu);
 		disable_clk(gpu);
+#else
+		DBG("%s: @MF@ ignore inactive\n", gpu->name);
+#endif
 		gpu->inactive = true;
 	}
 	mutex_unlock(&dev->struct_mutex);
@@ -532,6 +542,8 @@ int msm_gpu_init(struct drm_device *drm, struct platform_device *pdev,
 	struct iommu_domain *iommu;
 	int i, ret;
 
+	printk(KERN_INFO "@MF@ %s pdev=%p '%s'\n", __func__, pdev, pdev->name);
+
 	if (WARN_ON(gpu->num_perfcntrs > ARRAY_SIZE(gpu->last_cntrs)))
 		gpu->num_perfcntrs = ARRAY_SIZE(gpu->last_cntrs);
 
@@ -641,6 +653,8 @@ void msm_gpu_cleanup(struct msm_gpu *gpu)
 
 	bs_fini(gpu);
 
+	mutex_lock(&gpu->dev->struct_mutex); /* MF avoid BUG */
+
 	if (gpu->rb) {
 		if (gpu->rb_iova)
 			msm_gem_put_iova(gpu->rb->bo, gpu->id);
@@ -649,4 +663,6 @@ void msm_gpu_cleanup(struct msm_gpu *gpu)
 
 	if (gpu->mmu)
 		gpu->mmu->funcs->destroy(gpu->mmu);
+
+	mutex_unlock(&gpu->dev->struct_mutex); /* MF avoid BUG */
 }

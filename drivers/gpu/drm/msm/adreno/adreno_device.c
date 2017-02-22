@@ -25,10 +25,12 @@
 
 #define ANY_ID 0xff
 
-bool hang_debug = false;
+//bool hang_debug = false;
+bool hang_debug = true;
 MODULE_PARM_DESC(hang_debug, "Dump registers when hang is detected (can be slow!)");
 module_param_named(hang_debug, hang_debug, bool, 0600);
 
+struct msm_gpu *a2xx_gpu_init(struct drm_device *dev);
 struct msm_gpu *a3xx_gpu_init(struct drm_device *dev);
 struct msm_gpu *a4xx_gpu_init(struct drm_device *dev);
 
@@ -290,7 +292,7 @@ static int adreno_remove(struct platform_device *pdev)
 
 static const struct of_device_id dt_match[] = {
 	{ .compatible = "qcom,adreno-3xx" },
-	{ .compatible = "fsl,imx53-gpu" },
+	{ .compatible = "fsl,imx53-gpu-free" },
 	/* for backwards compat w/ downstream kgsl DT files: */
 	{ .compatible = "qcom,kgsl-3d0" },
 	{}

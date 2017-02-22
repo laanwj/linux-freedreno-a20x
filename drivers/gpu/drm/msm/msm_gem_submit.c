@@ -96,6 +96,9 @@ static int submit_lookup_objects(struct msm_gem_submit *submit,
 			goto out_unlock;
 		}
 
+		printk(KERN_INFO "@MF@ %s: idx=%d handle=%u presumed=%llx\n", __func__,
+			i, submit_bo.handle, submit_bo.presumed);
+
 		msm_obj = to_msm_bo(obj);
 
 		if (!list_empty(&msm_obj->submit_entry)) {
@@ -254,12 +257,18 @@ static int submit_reloc(struct msm_gem_submit *submit, struct msm_gem_object *ob
 		return ret;
 	}
 
+#if 0
+	printk(KERN_INFO "@MF@ %s nr_bos=%d nr_relocs=%d\n", __func__,
+		submit->nr_bos, nr_relocs);
+#endif
+
 	for (i = 0; i < nr_relocs; i++) {
 		struct drm_msm_gem_submit_reloc submit_reloc;
 		void __user *userptr =
 			to_user_ptr(relocs + (i * sizeof(submit_reloc)));
 		uint32_t iova, off;
 		bool valid;
+		struct msm_gem_object *vertex_bo;
 
 		ret = copy_from_user(&submit_reloc, userptr, sizeof(submit_reloc));
 		if (ret)
@@ -280,9 +289,15 @@ static int submit_reloc(struct msm_gem_submit *submit, struct msm_gem_object *ob
 			return -EINVAL;
 		}
 
-		ret = submit_bo(submit, submit_reloc.reloc_idx, NULL, &iova, &valid);
+		ret = submit_bo(submit, submit_reloc.reloc_idx, &vertex_bo, &iova, &valid);
 		if (ret)
 			return ret;
+
+#if 0
+		printk(KERN_INFO "@MF@ reloc i=%d idx=%d base=%08x offset=%08llx valid=%d shift=%d or=%08x\n",
+			i, submit_reloc.reloc_idx, iova, submit_reloc.reloc_offset, valid,
+			submit_reloc.shift, submit_reloc.or);
+#endif
 
 		if (valid)
 			continue;
@@ -295,6 +310,22 @@ static int submit_reloc(struct msm_gem_submit *submit, struct msm_gem_object *ob
 			iova <<= submit_reloc.shift;
 
 		ptr[off] = iova | submit_reloc.or;
+#if 0
+		printk(KERN_INFO "@MF@ reloc i=%d idx=%d final=%08x\n",
+			i, submit_reloc.reloc_idx, ptr[off]);
+
+		if (submit_reloc.or == 3) {
+			uint32_t *vbuf;
+
+			vbuf = msm_gem_vaddr_locked(&vertex_bo->base);
+			if (!vbuf)
+				printk(KERN_ERR "^@MF@ unable to map vbuf\n");
+			else
+				print_hex_dump(KERN_INFO, "vertex buf ",
+					DUMP_PREFIX_OFFSET, 16, 1,
+					vbuf, min(vertex_bo->base.size, 0x1000), false);
+		}
+#endif
 
 		last_offset = off;
 	}
@@ -327,6 +358,8 @@ int msm_ioctl_gem_submit(struct drm_device *dev, void *data,
 	struct msm_gpu *gpu;
 	unsigned i;
 	int ret;
+
+	msleep(1000);
 
 	/* for now, we just have 3d pipe.. eventually this would need to
 	 * be more clever to dispatch to appropriate gpu module:
@@ -399,6 +432,11 @@ int msm_ioctl_gem_submit(struct drm_device *dev, void *data,
 			goto out;
 		}
 
+		printk(KERN_INFO "@MF@ %s idx=%d iova=%x type=%d size=%d offset=%d valid=%d\n", __func__,
+			submit_cmd.submit_idx, iova,
+			submit_cmd.type, submit_cmd.size, submit_cmd.submit_offset, submit->valid );
+
+
 		submit->cmd[i].type = submit_cmd.type;
 		submit->cmd[i].size = submit_cmd.size / 4;
 		submit->cmd[i].iova = iova + submit_cmd.submit_offset;
@@ -411,17 +449,26 @@ int msm_ioctl_gem_submit(struct drm_device *dev, void *data,
 				submit_cmd.nr_relocs, submit_cmd.relocs);
 		if (ret)
 			goto out;
+
+#if 0
+		if (msm_obj->vaddr) {
+			print_hex_dump(KERN_INFO, "cmd buf ", DUMP_PREFIX_OFFSET, 16, 1,
+				msm_obj->vaddr + submit_cmd.submit_offset,
+				submit_cmd.size, false);
+		}
+#endif
 	}
 
 	submit->nr_cmds = i;
 
 	ret = msm_gpu_submit(gpu, submit, ctx);
-
+	printk(KERN_INFO "@MF@ submit %d cmds ret=%d fence=%d\n", submit->nr_cmds, ret, submit->fence);
 	args->fence = submit->fence;
 
 out:
 	if (submit)
 		submit_cleanup(submit, !!ret);
 	mutex_unlock(&dev->struct_mutex);
+
 	return ret;
 }

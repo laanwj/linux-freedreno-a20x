@@ -70,10 +70,17 @@ int adreno_hw_init(struct msm_gpu *gpu)
 			AXXX_CP_RB_CNTL_BUFSZ(ilog2(gpu->rb->size / 8)) |
 			AXXX_CP_RB_CNTL_BLKSZ(ilog2(RB_BLKSIZE / 8)));
 
+	printk(KERN_INFO "@MF@ %s rb %x memptrs %x\n", __func__, gpu->rb_iova, adreno_gpu->memptrs_iova);
+
 	/* Setup ringbuffer address: */
 	adreno_gpu_write(adreno_gpu, REG_ADRENO_CP_RB_BASE, gpu->rb_iova);
 	adreno_gpu_write(adreno_gpu, REG_ADRENO_CP_RB_RPTR_ADDR,
 			rbmemptr(adreno_gpu, rptr));
+
+	// Extra MF
+	gpu_write(&adreno_gpu->base, REG_AXXX_CP_RB_WPTR_BASE,
+			rbmemptr(adreno_gpu, wptr));
+	gpu_write(&adreno_gpu->base, REG_AXXX_CP_RB_WPTR_DELAY, 0);
 
 	/* Setup scratch/timestamp: */
 	adreno_gpu_write(adreno_gpu, REG_ADRENO_SCRATCH_ADDR,
@@ -127,6 +134,12 @@ int adreno_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 	struct msm_ringbuffer *ring = gpu->rb;
 	unsigned i, ibs = 0;
 
+	printk(KERN_INFO "@MF@ %s fence=%d rptr=%d wptr=%d rb wptr=%d\n", __func__,
+		submit->fence,
+		adreno_gpu->memptrs->rptr,
+		adreno_gpu->memptrs->wptr,
+		get_wptr(gpu->rb));
+
 	for (i = 0; i < submit->nr_cmds; i++) {
 		switch (submit->cmd[i].type) {
 		case MSM_SUBMIT_CMD_IB_TARGET_BUF:
@@ -137,6 +150,8 @@ int adreno_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 			if (priv->lastctx == ctx)
 				break;
 		case MSM_SUBMIT_CMD_BUF:
+			printk(KERN_INFO "@MF@ submit indirect buf %d type=%d iova=%x size=%d wptr=%d\n",
+				i, submit->cmd[i].type, submit->cmd[i].iova, submit->cmd[i].size, get_wptr(gpu->rb));
 			OUT_PKT3(ring, CP_INDIRECT_BUFFER_PFD, 2);
 			OUT_RING(ring, submit->cmd[i].iova);
 			OUT_RING(ring, submit->cmd[i].size);
@@ -144,6 +159,8 @@ int adreno_submit(struct msm_gpu *gpu, struct msm_gem_submit *submit,
 			break;
 		}
 	}
+
+	printk(KERN_INFO "@MF@ %s submitted %d ibs rb wptr=%d\n", __func__, ibs, get_wptr(gpu->rb));
 
 	/* on a320, at least, we seem to need to pad things out to an
 	 * even number of qwords to avoid issue w/ CP hanging on wrap-
@@ -199,6 +216,7 @@ void adreno_flush(struct msm_gpu *gpu)
 	mb();
 
 	adreno_gpu_write(adreno_gpu, REG_ADRENO_CP_RB_WPTR, wptr);
+	printk(KERN_INFO "@MF@ %s wptr=%d\n", __func__, wptr);
 }
 
 void adreno_idle(struct msm_gpu *gpu)
@@ -208,7 +226,8 @@ void adreno_idle(struct msm_gpu *gpu)
 
 	/* wait for CP to drain ringbuffer: */
 	if (spin_until(adreno_gpu->memptrs->rptr == wptr))
-		DRM_ERROR("%s: timeout waiting to drain ringbuffer!\n", gpu->name);
+		DRM_ERROR("%s: timeout waiting to drain ringbuffer! rptr=%d wptr=%d\n",
+			gpu->name, adreno_gpu->memptrs->rptr, wptr);
 
 	/* TODO maybe we need to reset GPU here to recover from hang? */
 }
