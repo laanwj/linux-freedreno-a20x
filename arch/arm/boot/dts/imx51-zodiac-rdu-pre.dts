@@ -493,6 +493,70 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	status = "okay";
+
+	pic {
+		compatible = "zii,rave-sp-rdu1", "simple-mfd";
+		status = "okay";
+		current-speed = <38400>;
+
+		main_eeprom {
+			compatible = "zii,pic-main-eeprom";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			status = "okay";
+
+			boot_source: boot-source@83 {
+				reg = <0x83 1>;
+			};
+			max_failed_boots: max-failed-boots@8E {
+				reg = <0x8E 2>;
+			};
+		};
+
+		dds_eeprom {
+			compatible = "zii,pic-dds-eeprom";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			status = "okay";
+		};
+
+		watchdog {
+			compatible = "zii,rave-sp-watchdog";
+			status = "okay";
+		};
+
+		hwmon {
+			compatible = "zii,pic-hwmon";
+			sensors = "RMB_3V3_PMIC",
+			"RMB_3V3_MCU",
+			"RMB_5V_MAIN",
+			"RMB_12V_MAIN",
+			"RMB_28V_FIL",
+			"RMB_28V_HOTSWAP",
+			"DEB_1V8",
+			"DEB_3V3",
+			"DEB_28V_DEB",
+			"DEB_28V_RDU",
+			"TEMPERATURE",
+			"TEMPERATURE_2",
+			"RMB_28V_CURRENT";
+			status = "okay";
+		};
+		backlight {
+			compatible = "zii,pic-backlight";
+			status = "okay";
+		};
+
+		leds {
+			compatible = "zii,pic-leds";
+			status = "okay";
+		};
+
+		pwrbutton {
+			compatible = "zii,pic-pwrbutton";
+			status = "okay";
+		};
+	};
 };
 
 &usbh1 {
