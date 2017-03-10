@@ -90,7 +90,6 @@ int gsl_linux_map_init()
 }
 
 // WL: Allocate size bytes at specified gpu_addr
-// Only called from one place: kgsl_hal_allocphysical
 struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int size)
 {
 	struct device *linux_dev = gsl_driver.osdep_dev;
@@ -101,7 +100,6 @@ struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int si
 
 	mutex_lock(&gsl_linux_map_mutex);
 
-	// WL: this is gsl_linux_map_find
 	list_for_each(p, &gsl_linux_map_list){
 		map = list_entry(p, struct gsl_linux_map, list);
 		if(map->gpu_addr == gpu_addr){
@@ -109,7 +107,7 @@ struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int si
 			// before kernel_virtual_addr can be read?
 			// or not: the mutex protects the list, not the things pointed to?
 			mutex_unlock(&gsl_linux_map_mutex);
-			return map;
+			return map->kernel_virtual_addr;
 		}
 	}
 
@@ -168,7 +166,7 @@ void gsl_linux_map_free(unsigned int gpu_addr)
 	mutex_unlock(&gsl_linux_map_mutex);
 }
 
-// WL: called from only one place: kgsl_hal_allocphysical
+
 void gsl_linux_map_fill_sg(struct gsl_linux_map *map, unsigned int scattergatterlist[])
 {
 	int i;
@@ -193,7 +191,7 @@ void gsl_linux_map_fill_sg(struct gsl_linux_map *map, unsigned int scattergatter
 
 }
 
-// WL: only called from gsl_linux_map_mmap
+
 static struct gsl_linux_map *gsl_linux_map_find_entry(unsigned int gpu_addr)
 {
 	struct gsl_linux_map * map;
