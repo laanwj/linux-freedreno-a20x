@@ -115,8 +115,10 @@ struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int si
 
 #ifdef MF_USE_DMA_API
 	va = dma_alloc_writecombine(linux_dev, size, &dma_addr, GFP_KERNEL);
+	printk("gpu: dma_alloc_writecombine: %08x %08x %p\n", gpu_addr, size, va);
 #else
 	va = __vmalloc(size, GFP_KERNEL, pgprot_writecombine(pgprot_kernel));
+	printk("gpu: __vmalloc: %08x %08x %p\n", gpu_addr, size, va);
 #endif
 
 	if(va == NULL){
