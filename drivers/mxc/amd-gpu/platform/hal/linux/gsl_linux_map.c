@@ -89,6 +89,7 @@ int gsl_linux_map_init()
 	return 0;
 }
 
+// WL: Allocate size bytes at specified gpu_addr
 struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int size)
 {
 	struct device *linux_dev = gsl_driver.osdep_dev;
@@ -102,6 +103,9 @@ struct gsl_linux_map *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int si
 	list_for_each(p, &gsl_linux_map_list){
 		map = list_entry(p, struct gsl_linux_map, list);
 		if(map->gpu_addr == gpu_addr){
+			// WL: potential race if map is freed right after unlocking the mutex,
+			// before kernel_virtual_addr can be read?
+			// or not: the mutex protects the list, not the things pointed to?
 			mutex_unlock(&gsl_linux_map_mutex);
 			return map->kernel_virtual_addr;
 		}
@@ -213,7 +217,9 @@ void *gsl_linux_map_read(void *dst, unsigned int gpuoffset, unsigned int sizebyt
 	struct list_head *p;
 
 	mutex_lock(&gsl_linux_map_mutex);
-
+	// WL: this does not seem to do the proper check on sizebytes
+	// it only checks if the starting gpuoffset is in the mapping, then always
+	// copies that number of bytes, even if it would exceed the end.
 	list_for_each(p, &gsl_linux_map_list){
 		map = list_entry(p, struct gsl_linux_map, list);
 		if(map->gpu_addr <= gpuoffset &&
@@ -242,6 +248,9 @@ void *gsl_linux_map_write(void *src, unsigned int gpuoffset, unsigned int sizeby
 
 	mutex_lock(&gsl_linux_map_mutex);
 
+	// WL: this does not seem to do the proper check on sizebytes
+	// it only checks if the starting gpuoffset is in the mapping, then always
+	// copies that number of bytes, even if it would exceed the end.
 	list_for_each(p, &gsl_linux_map_list){
 		map = list_entry(p, struct gsl_linux_map, list);
 		if(map->gpu_addr <= gpuoffset &&
@@ -302,6 +311,7 @@ int gsl_linux_map_destroy()
 		list_del(&map->list);
 		kfree(map);
 	}
+	// WL: no error reporting if the map is not found
 
 	INIT_LIST_HEAD(&gsl_linux_map_list);
 
@@ -326,7 +336,7 @@ int gsl_linux_map_mmap(unsigned long gpu_addr, struct vm_area_struct *vma, unsig
 		return -EINVAL;
 
 #ifdef MF_USE_DMA_API
-	return 	dma_mmap_writecombine(linux_dev, vma,
+	return dma_mmap_writecombine(linux_dev, vma,
 			entry->kernel_virtual_addr, entry->dma_addr,size);
 
 #else
@@ -339,7 +349,7 @@ int gsl_linux_map_mmap(unsigned long gpu_addr, struct vm_area_struct *vma, unsig
 	    va += PAGE_SIZE;
 	    size -= PAGE_SIZE;
 	}
-#endif
 
 	return 0;
+#endif
 }
