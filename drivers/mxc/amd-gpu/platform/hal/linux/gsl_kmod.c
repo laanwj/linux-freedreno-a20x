@@ -1167,6 +1167,9 @@ static int gpu_probe(struct platform_device *pdev)
 	gpu_reserved_mem_size = pdata->reserved_mem_size;
 	enable_mmu = pdata->enable_mmu;
     }
+    enable_mmu = 0;
+    //gpu_reserved_mem = 0xc8000000;
+    //gpu_reserved_mem_size = 128*1024*1024;
 
     for(i = 0; i < 2; i++){
         res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
