@@ -43,4 +43,6 @@ void *gsl_linux_map_write(void *src, unsigned int gpuoffset, unsigned int sizeby
 void *gsl_linux_map_set(unsigned int gpuoffset, unsigned int value, unsigned int sizebytes);
 int gsl_linux_map_destroy(void);
 
+void *gsl_linux_find_kaddr(unsigned int gpu_addr);
+
 #endif

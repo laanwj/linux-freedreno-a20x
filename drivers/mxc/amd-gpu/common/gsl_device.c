@@ -15,7 +15,7 @@
  * 02110-1301, USA.
  *
  */
- 
+
 #include "gsl.h"
 #include "gsl_hal.h"
 #ifdef _LINUX
@@ -135,7 +135,7 @@ kgsl_device_init(gsl_device_t *device, gsl_deviceid_t device_id)
             return (status);
         }
 
-#ifndef _LINUX		
+#ifndef _LINUX
         // Create timestamp event
         device->timestamp_event = kos_event_create(0);
         if( !device->timestamp_event )
@@ -146,7 +146,7 @@ kgsl_device_init(gsl_device_t *device, gsl_deviceid_t device_id)
 #else
 		// Create timestamp wait queue
 		init_waitqueue_head(&device->timestamp_waitq);
-#endif	
+#endif
 
         //
         //  Read the chip ID after the device has been initialized.
@@ -198,7 +198,7 @@ kgsl_device_close(gsl_device_t *device)
 	kgsl_sharedmem_free0(&device->memstore, GSL_CALLER_PROCESSID_GET());
     }
 
-#ifndef _LINUX	
+#ifndef _LINUX
     // destroy timestamp event
     if(device->timestamp_event)
     {
@@ -208,10 +208,10 @@ kgsl_device_close(gsl_device_t *device)
     }
 #else
     wake_up_interruptible_all(&(device->timestamp_waitq));
-#endif	
+#endif
 
     kgsl_log_write( KGSL_LOG_GROUP_DEVICE | KGSL_LOG_LEVEL_TRACE, "<-- kgsl_device_close. Return value %B\n", status );
-    
+
     return (status);
 }
 
@@ -439,6 +439,9 @@ kgsl_device_start(gsl_deviceid_t device_id, gsl_flags_t flags)
     kgsl_log_write( KGSL_LOG_GROUP_DEVICE | KGSL_LOG_LEVEL_TRACE,
                     "--> int kgsl_device_start(gsl_deviceid_t device_id=%D, gsl_flags_t flags=%d)\n", device_id, flags );
 
+    //flags |= GSL_FLAGS_SAFEMODE;
+    printk(KERN_INFO "@MF@ %s device=%d flags=%x\n", __func__, device_id, flags);
+
     GSL_API_MUTEX_LOCK();
 
     if ((GSL_DEVICE_G12 == device_id) && !(hal->has_z160)) {
@@ -452,9 +455,9 @@ kgsl_device_start(gsl_deviceid_t device_id, gsl_flags_t flags)
     }
 
     device = &gsl_driver.device[device_id-1];       // device_id is 1 based
-    
+
     kgsl_device_active(device);
-    
+
     if (!(device->flags & GSL_FLAGS_INITIALIZED))
     {
         GSL_API_MUTEX_UNLOCK();
@@ -549,7 +552,7 @@ kgsl_device_idle(gsl_deviceid_t device_id, unsigned int timeout)
     device = &gsl_driver.device[device_id-1];       // device_id is 1 based
 
     kgsl_device_active(device);
-    
+
     if (device->ftbl.device_idle)
     {
         status = device->ftbl.device_idle(device, timeout);
