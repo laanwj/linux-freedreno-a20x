@@ -31,6 +31,8 @@
 
 #include "imx-drm.h"
 
+#include "kgsl2cma.h"
+
 #define MAX_CRTC	4
 
 struct imx_drm_component {
@@ -151,7 +153,8 @@ static int imx_drm_atomic_check(struct drm_device *dev,
 }
 
 static const struct drm_mode_config_funcs imx_drm_mode_config_funcs = {
-	.fb_create = drm_fb_cma_create,
+	//.fb_create = drm_fb_cma_create,
+	.fb_create = drm_fb_kgsl2cma_create,
 	.output_poll_changed = imx_drm_output_poll_changed,
 	.atomic_check = imx_drm_atomic_check,
 	.atomic_commit = drm_atomic_helper_commit,
