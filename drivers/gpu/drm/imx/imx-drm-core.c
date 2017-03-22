@@ -35,6 +35,7 @@
 #include "msm_plat.h"
 #include "msm2cma.h"
 #endif
+#include "kgsl2cma.h"
 
 #define MAX_CRTC	4
 
@@ -244,7 +245,7 @@ static struct drm_mode_config_funcs imx_drm_mode_config_funcs = {
 #ifdef CONFIG_DRM_IMX_ADRENO
 	.fb_create = drm_fb_msm2cma_create,
 #else
-	.fb_create = drm_fb_cma_create,
+	.fb_create = drm_fb_kgsl2cma_create,
 #endif
 	.output_poll_changed = imx_drm_output_poll_changed,
 };

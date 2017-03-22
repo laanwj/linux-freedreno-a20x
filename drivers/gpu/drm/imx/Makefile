@@ -28,3 +28,4 @@ obj-$(CONFIG_DRM_IMX_ADRENO) += imx-gpu.o msm2cma.o \
 	../msm/msm_rd.o \
 	../msm/msm_ringbuffer.o \
 	../msm/msm_util.o
+obj-$(CONFIG_MXC_AMD_GPU) += kgsl2cma.o
