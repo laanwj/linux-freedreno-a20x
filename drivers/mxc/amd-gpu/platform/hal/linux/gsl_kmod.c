@@ -605,12 +605,18 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
     case IOCTL_KGSL_DRAWCTXT_BIND_GMEM_SHADOW:
         {
             kgsl_drawctxt_bind_gmem_shadow_t param;
-            if (copy_from_user(&param, (void __user *)arg, sizeof(kgsl_drawctxt_bind_gmem_shadow_t)))
+            gsl_rect_t gmem_rect;
+            gsl_buffer_desc_t shadow_buffer;
+            if (copy_from_user(&param, (void __user *)arg, sizeof(kgsl_drawctxt_bind_gmem_shadow_t)) ||
+		copy_from_user(&gmem_rect, (void __user *)param.gmem_rect, sizeof(gsl_rect_t)) ||
+		copy_from_user(&shadow_buffer, (void __user *)param.shadow_buffer, sizeof(gsl_buffer_desc_t)))
             {
                 printk(KERN_ERR "%s: copy_from_user error\n", __func__);
                 kgslStatus = GSL_FAILURE;
                 break;
             }
+	    param.shadow_buffer = &shadow_buffer;
+	    param.gmem_rect = &gmem_rect;
             kgslStatus = kgsl_drawctxt_bind_gmem_shadow(param.device_id, param.drawctxt_id, param.gmem_rect, param.shadow_x, param.shadow_y, param.shadow_buffer, param.buffer_id);
             break;
         }
