@@ -497,12 +497,16 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
         {
             int err;
             kgsl_cmdstream_freememontimestamp_t param;
-            if (copy_from_user(&param, (void __user *)arg, sizeof(kgsl_cmdstream_freememontimestamp_t)))
+	    gsl_memdesc_t memdesc;
+
+            if (copy_from_user(&param, (void __user *)arg, sizeof(kgsl_cmdstream_freememontimestamp_t)) ||
+		copy_from_user(&memdesc, (void __user *)param.memdesc, sizeof(gsl_memdesc_t)))
             {
                 printk(KERN_ERR "%s: copy_from_user error\n", __func__);
                 kgslStatus = GSL_FAILURE;
                 break;
             }
+	    param.memdesc = &memdesc;
 
             printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP gpuaddr=%08x ts=%d\n",
             	    param.memdesc->gpuaddr,
