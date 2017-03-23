@@ -19,12 +19,6 @@ struct drm_fb_cma {
 	struct drm_gem_cma_object	*obj[4];
 };
 
-struct drm_fbdev_cma {
-	struct drm_fb_helper	fb_helper;
-	struct drm_fb_cma	*fb;
-};
-
-
 static inline struct drm_fb_cma *to_fb_cma(struct drm_framebuffer *fb)
 {
 	return container_of(fb, struct drm_fb_cma, fb);
@@ -37,7 +31,8 @@ static void drm_fb_kgsl2cma_destroy(struct drm_framebuffer *fb)
 
 	for (i = 0; i < 4; i++) {
 		if (fb_cma->obj[i]) {
-			drm_gem_object_unreference_unlocked(&fb_cma->obj[i]->base);
+			// It is not an actual GEM object
+			// drm_gem_object_unreference_unlocked(&fb_cma->obj[i]->base);
 			kfree(fb_cma->obj[i]);
 		}
 	}
@@ -61,7 +56,7 @@ static struct drm_framebuffer_funcs drm_fb_kgsl2cma_funcs = {
 };
 
 static struct drm_fb_cma *drm_fb_kgsl2cma_alloc(struct drm_device *dev,
-	struct drm_mode_fb_cmd2 *mode_cmd)
+	const struct drm_mode_fb_cmd2 *mode_cmd)
 {
 	struct drm_fb_cma *fb_cma;
 	int ret;
@@ -72,7 +67,7 @@ static struct drm_fb_cma *drm_fb_kgsl2cma_alloc(struct drm_device *dev,
 	if (!fb_cma)
 		return ERR_PTR(-ENOMEM);
 
-	drm_helper_mode_fill_fb_struct(&fb_cma->fb, mode_cmd);
+	drm_helper_mode_fill_fb_struct(dev, &fb_cma->fb, mode_cmd);
 
 	for (i = 0; i < num_planes; i++) {
 		struct drm_gem_cma_object *cma_obj;
@@ -108,7 +103,7 @@ err_free_fb_cma:
 }
 
 struct drm_framebuffer *drm_fb_kgsl2cma_create(struct drm_device *dev,
-	struct drm_file *file_priv, struct drm_mode_fb_cmd2 *mode_cmd)
+	struct drm_file *file_priv, const struct drm_mode_fb_cmd2 *mode_cmd)
 {
 	struct drm_fb_cma *fb_cma;
 	int ret;
