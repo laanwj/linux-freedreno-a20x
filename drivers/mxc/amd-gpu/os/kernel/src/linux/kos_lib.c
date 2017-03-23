@@ -346,7 +346,9 @@ kos_strlen(const char* string)
 //////////////////////////////////////////////////////////////////////////////
 //  sync API
 //////////////////////////////////////////////////////////////////////////////
+#if 0
 static struct lock_class_key kos_lock_key;
+#endif
 
 KOS_API oshandle_t
 kos_mutex_create(const char *name)
@@ -355,7 +357,9 @@ kos_mutex_create(const char *name)
 	if (!mutex)
 		return 0;
 	mutex_init(mutex);
+#if 0
 	lockdep_set_class_and_name(mutex, &kos_lock_key, name);
+#endif
 	return mutex;
 }
 
