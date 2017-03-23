@@ -1585,6 +1585,7 @@ KGSL_API int kgsl_drawctxt_bind_gmem_shadow(gsl_deviceid_t device_id, unsigned i
     gmem_shadow_t  *shadow = &drawctxt->user_gmem_shadow[buffer_id];
     unsigned int    i;
 
+    printk(KERN_INFO "@WL@ %s pre\n", __func__);
     GSL_API_MUTEX_LOCK();
     GSL_CONTEXT_MUTEX_LOCK();
 
