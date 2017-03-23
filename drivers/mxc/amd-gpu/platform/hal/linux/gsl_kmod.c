@@ -64,7 +64,7 @@ static ssize_t gsl_kmod_read(struct file *fd, char __user *buf, size_t len, loff
 static ssize_t gsl_kmod_write(struct file *fd, const char __user *buf, size_t len, loff_t *ptr);
 static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg);
 static int gsl_kmod_mmap(struct file *fd, struct vm_area_struct *vma);
-static int gsl_kmod_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
+static int gsl_kmod_fault(struct vm_fault *vmf);
 static int gsl_kmod_open(struct inode *inode, struct file *fd);
 static int gsl_kmod_release(struct inode *inode, struct file *fd);
 static irqreturn_t z160_irq_handler(int irq, void *dev_id);
@@ -873,7 +873,7 @@ static int gsl_kmod_mmap(struct file *fd, struct vm_area_struct *vma)
     return status;
 }
 
-static int gsl_kmod_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+static int gsl_kmod_fault(struct vm_fault *vmf)
 {
     return VM_FAULT_SIGBUS;
 }
