@@ -375,6 +375,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
 
+#ifdef DUMP_COMMAND_BUFFERS /* dump full command buffers: NOISY */
             {
             	    u32 *mf_buf;
             	    char hdr[50];
@@ -392,7 +393,6 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
 
             	    mf_buf = (u32 *)kgsl_sharedmem_convertaddr(param.ibaddr, 0);
 		    mf_patch_ib(mf_buf, param.sizedwords);
-
             	    snprintf(hdr, sizeof(hdr), "@MF@ ib=%d ic=%d >", ib_idx, param.drawctxt_index);
             	    printk(KERN_INFO "@MF@ dumping IB gpu=%08x host=%p hdr='%s'\n",
             	    	    param.ibaddr, mf_buf, hdr);
@@ -457,6 +457,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
 		    }
 		    ib_idx++;
             }
+#endif
             kgslStatus = kgsl_cmdstream_issueibcmds(param.device_id, param.drawctxt_index, param.ibaddr, param.sizedwords, &tmp, param.flags);
             if (kgslStatus == GSL_SUCCESS)
             {
