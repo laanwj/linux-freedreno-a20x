@@ -867,12 +867,20 @@ static int gsl_kmod_mmap(struct file *fd, struct vm_area_struct *vma)
     unsigned long size = vma->vm_end - vma->vm_start;
     unsigned long prot = pgprot_writecombine(vma->vm_page_prot);
     unsigned long addr = vma->vm_pgoff << PAGE_SHIFT;
+    void *va = NULL;
 
     printk(KERN_INFO "@MF@ %s(%08x size=%08x\n", __func__, addr, size);
 
     if (gsl_driver.enable_mmu && (addr < GSL_LINUX_MAP_RANGE_END) && (addr >= GSL_LINUX_MAP_RANGE_START)) {
-	vma->vm_pgoff = 0;
-	status = gsl_linux_map_mmap(addr, vma, size);
+	va = gsl_linux_map_find(addr);
+	while (size > 0) {
+	    if (remap_pfn_range(vma, start, vmalloc_to_pfn(va), PAGE_SIZE, prot)) {
+		return -EAGAIN;
+	    }
+	    start += PAGE_SIZE;
+	    va += PAGE_SIZE;
+	    size -= PAGE_SIZE;
+	}
     } else {
 	if (remap_pfn_range(vma, start, pfn, size, prot)) {
 	    status = -EAGAIN;
