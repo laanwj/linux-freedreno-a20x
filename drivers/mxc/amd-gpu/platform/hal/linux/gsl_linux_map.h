@@ -31,21 +31,17 @@
 
 #include "gsl_halconfig.h"
 
-struct vm_area_struct;
-struct gsl_linux_map;
-
 #define GSL_LINUX_MAP_RANGE_START (1024*1024)
 #define GSL_LINUX_MAP_RANGE_END (GSL_LINUX_MAP_RANGE_START+GSL_HAL_SHMEM_SIZE_EMEM1_MMU)
 
 int gsl_linux_map_init(void);
-struct gsl_linux_map* gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int size);
+void *gsl_linux_map_alloc(unsigned int gpu_addr, unsigned int size);
 void gsl_linux_map_free(unsigned int gpu_addr);
-void gsl_linux_map_fill_sg(struct gsl_linux_map *map, unsigned int scattergatterlist[]);
+void *gsl_linux_map_find(unsigned int gpu_addr);
 void *gsl_linux_map_read(void *dst, unsigned int gpuoffset, unsigned int sizebytes, unsigned int touserspace);
 void *gsl_linux_map_write(void *src, unsigned int gpuoffset, unsigned int sizebytes, unsigned int fromuserspace);
 void *gsl_linux_map_set(unsigned int gpuoffset, unsigned int value, unsigned int sizebytes);
 int gsl_linux_map_destroy(void);
-int gsl_linux_map_mmap(unsigned long gpu_addr, struct vm_area_struct *vma, unsigned long size);
 void *gsl_linux_find_kaddr(unsigned int gpu_addr);
 
 #endif
