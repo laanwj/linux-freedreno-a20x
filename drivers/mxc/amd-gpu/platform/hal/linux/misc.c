@@ -26,6 +26,8 @@
 #include <linux/hardirq.h>
 #include <linux/semaphore.h>
 
+extern bool debugfs_noisy;
+
 typedef struct _gsl_autogate_t {
     struct timer_list timer;
     spinlock_t lock;
@@ -61,7 +63,9 @@ static int _kgsl_device_active(gsl_device_t *dev, int all)
 		printk(KERN_ERR "%s: autogate has exited!\n", __func__);
 		return 0;
 	}
-	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
+	if (debugfs_noisy) {
+	    printk(KERN_ERR "@MF@ %s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
+	}
 
 	spin_lock_irqsave(&autogate->lock, flags);
 	if (in_interrupt()) {
