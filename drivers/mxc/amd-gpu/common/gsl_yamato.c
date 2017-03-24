@@ -231,8 +231,9 @@ kgsl_yamato_isr(gsl_device_t *device)
 
     // determine if yamato is interrupting, and if so, which block
     device->ftbl.device_regread(device, mmMASTER_INT_SIGNAL, &status);
-
+#ifdef KGSL_NOISY
     mf_dump_state(device);
+#endif
 
     if (status & MASTER_INT_SIGNAL__MH_INT_STAT)
     {

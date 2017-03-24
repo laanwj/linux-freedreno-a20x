@@ -61,7 +61,9 @@ static int _kgsl_device_active(gsl_device_t *dev, int all)
 		printk(KERN_ERR "%s: autogate has exited!\n", __func__);
 		return 0;
 	}
-	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
+#ifdef KGSL_NOISY
+	printk(KERN_ERR "@MF@ %s:%d id %d active %d\n", __func__, __LINE__, dev->id, autogate->active);
+#endif
 
 	spin_lock_irqsave(&autogate->lock, flags);
 	if (in_interrupt()) {

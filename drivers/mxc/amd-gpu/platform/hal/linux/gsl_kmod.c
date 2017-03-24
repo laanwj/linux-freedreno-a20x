@@ -375,7 +375,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
 
-#ifdef DUMP_COMMAND_BUFFERS /* dump full command buffers: NOISY */
+#ifdef KGSL_DUMP_COMMAND_BUFFERS /* dump full command buffers: NOISY */
             {
             	    u32 *mf_buf;
             	    char hdr[50];
@@ -461,7 +461,9 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
             kgslStatus = kgsl_cmdstream_issueibcmds(param.device_id, param.drawctxt_index, param.ibaddr, param.sizedwords, &tmp, param.flags);
             if (kgslStatus == GSL_SUCCESS)
             {
+#ifdef KGSL_NOISY
             	printk(KERN_INFO "@MF@ SUBMIT DONE OK ts=%d flags=%08x\n", tmp, param.flags);
+#endif
                 if (copy_to_user(param.timestamp, &tmp, sizeof(gsl_timestamp_t)))
                 {
                     printk(KERN_ERR "%s: copy_to_user error ts=%p\n", __func__, param.timestamp);
@@ -491,7 +493,9 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                     break;
             }
             kgslStatus = GSL_SUCCESS;
+#ifdef KGSL_NOISY
             printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_READTIMESTAMP ts=%d\n", tmp);
+#endif
             break;
         }
     case IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP:
@@ -540,8 +544,10 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_cmdstream_waittimestamp(param.device_id, param.timestamp, param.timeout);
+#ifdef KGSL_NOISY
             printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_WAITTIMESTAMP ts=%d to=%d st=%d\n",
             	    param.timestamp, param.timeout, kgslStatus);
+#endif
             break;
         }
     case IOCTL_KGSL_CMDWINDOW_WRITE:
@@ -985,7 +991,9 @@ static irqreturn_t z160_irq_handler(int irq, void *dev_id)
 
 static irqreturn_t z430_irq_handler(int irq, void *dev_id)
 {
+#ifdef KGSL_NOISY
 	printk(KERN_INFO "@MF@ kgsl 3D IRQ\n");
+#endif
     kgsl_intr_isr(&gsl_driver.device[GSL_DEVICE_YAMATO-1]);
     return IRQ_HANDLED;
 }
