@@ -59,6 +59,8 @@ phys_addr_t gpu_reserved_mem;
 int gpu_reserved_mem_size;
 int z160_version;
 int enable_mmu;
+bool debugfs_dumpcmdbufs;
+bool debugfs_noisy;
 
 static ssize_t gsl_kmod_read(struct file *fd, char __user *buf, size_t len, loff_t *ptr);
 static ssize_t gsl_kmod_write(struct file *fd, const char __user *buf, size_t len, loff_t *ptr);
@@ -375,7 +377,7 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
 
-#ifdef DUMP_COMMAND_BUFFERS /* dump full command buffers: NOISY */
+	    if (debugfs_dumpcmdbufs) /* dump full command buffers: NOISY */
             {
             	    u32 *mf_buf;
             	    char hdr[50];
@@ -457,11 +459,14 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
 		    }
 		    ib_idx++;
             }
-#endif
+
             kgslStatus = kgsl_cmdstream_issueibcmds(param.device_id, param.drawctxt_index, param.ibaddr, param.sizedwords, &tmp, param.flags);
             if (kgslStatus == GSL_SUCCESS)
             {
-            	printk(KERN_INFO "@MF@ SUBMIT DONE OK ts=%d flags=%08x\n", tmp, param.flags);
+		if (debugfs_noisy) {
+            	    printk(KERN_INFO "@MF@ SUBMIT DONE OK ts=%d flags=%08x\n", tmp, param.flags);
+		}
+
                 if (copy_to_user(param.timestamp, &tmp, sizeof(gsl_timestamp_t)))
                 {
                     printk(KERN_ERR "%s: copy_to_user error ts=%p\n", __func__, param.timestamp);
@@ -491,7 +496,9 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                     break;
             }
             kgslStatus = GSL_SUCCESS;
-            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_READTIMESTAMP ts=%d\n", tmp);
+	    if (debugfs_noisy) {
+                printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_READTIMESTAMP ts=%d\n", tmp);
+	    }
             break;
         }
     case IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP:
@@ -540,8 +547,10 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_cmdstream_waittimestamp(param.device_id, param.timestamp, param.timeout);
-            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_WAITTIMESTAMP ts=%d to=%d st=%d\n",
-            	    param.timestamp, param.timeout, kgslStatus);
+	    if (debugfs_noisy) {
+                printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_WAITTIMESTAMP ts=%d to=%d st=%d\n",
+                        param.timestamp, param.timeout, kgslStatus);
+	    }
             break;
         }
     case IOCTL_KGSL_CMDWINDOW_WRITE:
@@ -985,7 +994,9 @@ static irqreturn_t z160_irq_handler(int irq, void *dev_id)
 
 static irqreturn_t z430_irq_handler(int irq, void *dev_id)
 {
+    if (debugfs_noisy) {
 	printk(KERN_INFO "@MF@ kgsl 3D IRQ\n");
+    }
     kgsl_intr_isr(&gsl_driver.device[GSL_DEVICE_YAMATO-1]);
     return IRQ_HANDLED;
 }
@@ -1148,6 +1159,16 @@ static int imxgpu_debugfs_gmem_init(struct platform_device *dev)
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
+	dentry = debugfs_create_bool("dumpcmdbufs", S_IRUGO|S_IWUSR,
+				       dir, &debugfs_dumpcmdbufs);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	dentry = debugfs_create_bool("noisy", S_IRUGO|S_IWUSR,
+				       dir, &debugfs_noisy);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	return 0;
 }
 
@@ -1189,6 +1210,8 @@ static int gpu_probe(struct platform_device *pdev)
     enable_mmu = 0;
     //gpu_reserved_mem = 0xc8000000;
     //gpu_reserved_mem_size = 128*1024*1024;
+    debugfs_dumpcmdbufs = 0;
+    debugfs_noisy = 0;
 
     for(i = 0; i < 2; i++){
         res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
