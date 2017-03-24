@@ -29,6 +29,8 @@
 #include "gsl_ringbuffer.h"
 #include "gsl_drawctxt.h"
 
+extern bool debugfs_noisy;
+
 //////////////////////////////////////////////////////////////////////////////
 // functions
 //////////////////////////////////////////////////////////////////////////////
@@ -231,8 +233,9 @@ kgsl_yamato_isr(gsl_device_t *device)
 
     // determine if yamato is interrupting, and if so, which block
     device->ftbl.device_regread(device, mmMASTER_INT_SIGNAL, &status);
-
-    mf_dump_state(device);
+    if (debugfs_noisy) {
+        mf_dump_state(device);
+    }
 
     if (status & MASTER_INT_SIGNAL__MH_INT_STAT)
     {
