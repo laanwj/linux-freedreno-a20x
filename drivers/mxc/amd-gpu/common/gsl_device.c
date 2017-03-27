@@ -152,6 +152,7 @@ kgsl_device_init(gsl_device_t *device, gsl_deviceid_t device_id)
         //  Read the chip ID after the device has been initialized.
         //
         device->chip_id       = kgsl_hal_getchipid(device->id);
+        printk("kgsl: chipid=0x%08x\n", device->chip_id);
     }
 
 
