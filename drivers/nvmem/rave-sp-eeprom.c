@@ -234,19 +234,21 @@ static int rave_sp_eeprom_probe(struct platform_device *pdev)
 	/* 	zpe->cmd = CMD_OLD_EEPROM; */
 	/* 	config.name = RAVE_SP_NAME_MAIN_EEPROM; */
 	/* 	config.size = MAIN_EEPROM_SIZE; */
-	/* } else */ if (id->data == (void *)MAIN_EEPROM) {
+	/* } else */
+#endif
+		if (id->data == (void *)MAIN_EEPROM) {
 		zpe->cmd = CMD_MAIN_EEPROM;
-		config.name = ZII_PIC_NAME_MAIN_EEPROM;
+		config.name = "pic-main-eeprom";
 		config.size = MAIN_EEPROM_SIZE;
 	} else {
 		zpe->cmd = CMD_DDS_EEPROM;
-		config.name = ZII_PIC_NAME_DDS_EEPROM;
-		config.size = zp->hw_id == ZII_PIC_HW_ID_RDU1 ?
-			DDS_EEPROM_SIZE_RDU1 : DDS_EEPROM_SIZE;
+		config.name = "pic-dds-eeprom";
+		config.size = /* zp->hw_id == ZII_PIC_HW_ID_RDU1 ? */
+			/* DDS_EEPROM_SIZE_RDU1 : */ DDS_EEPROM_SIZE;
 	}
-#endif
-	config.reg_read = zii_pic_eeprom_reg_read;
-	config.reg_write = zii_pic_eeprom_reg_write;
+
+	config.reg_read = rave_sp_eeprom_reg_read;
+	config.reg_write = rave_sp_eeprom_reg_write;
 
 	config.word_size = 1;
 	config.stride = 1;
