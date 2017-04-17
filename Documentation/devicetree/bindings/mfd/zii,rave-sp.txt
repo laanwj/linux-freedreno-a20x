@@ -1,0 +1,33 @@
+Zodiac Inflight Innovations RAVE Supervisory Processor
+
+Required parent device properties:
+
+ - compatible: Should be one of:
+	- "zii,rave-sp-niu"
+	- "zii,rave-sp-mezz"
+	- "zii,rave-sp-esb"
+	- "zii,rave-sp-rdu1"
+	- "zii,rave-sp-rdu2"
+
+ - current-speed: Should be set to baud rate SP device is using
+
+RAVE SP consists of the following sub-devices:
+
+Device				 Description
+------				 -----------
+rave-sp-wdt			: Watchdog
+
+
+Example of usage:
+
+	rdu {
+		compatible = "zii,rave-sp-rdu2";
+		current-speed = <1000000>;
+		status = "okay";
+
+		watchdog {
+			compatible = "zii,rave-sp-watchdog";
+			status = "okay";
+		};
+	};
+

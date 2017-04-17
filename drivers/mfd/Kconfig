@@ -867,6 +867,15 @@ config MFD_SPMI_PMIC
 	  Say M here if you want to include support for the SPMI PMIC
 	  series as a module.  The module will be called "qcom-spmi-pmic".
 
+config MFD_RAVE_SP
+	tristate "RAVE SP MCU core driver"
+	select MFD_CORE
+	select SERIAL_DEV_BUS
+	select CRC_CCITT
+	help
+	  Select this to get support for the RAVE Supervisory
+	  Processor driver
+
 config MFD_RDC321X
 	tristate "RDC R-321x southbridge"
 	select MFD_CORE
