@@ -1350,14 +1350,14 @@ static int imx_startup(struct uart_port *port)
 		struct tty_file_private *file_priv;
 		int readcnt = 0;
 
-		spin_lock(&tty->files_lock);
+		if (spin_trylock(&tty->files_lock)) {
+			if (!list_empty(&tty->tty_files))
+				list_for_each_entry(file_priv, &tty->tty_files, list)
+					if (!(file_priv->file->f_flags & O_WRONLY))
+						readcnt++;
 
-		if (!list_empty(&tty->tty_files))
-			list_for_each_entry(file_priv, &tty->tty_files, list)
-				if (!(file_priv->file->f_flags & O_WRONLY))
-					readcnt++;
-
-		spin_unlock(&tty->files_lock);
+			spin_unlock(&tty->files_lock);
+		}
 
 		if (readcnt > 0) {
 			imx_disable_rx_int(sport);
