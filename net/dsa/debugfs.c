@@ -372,6 +372,38 @@ static const struct dsa_debugfs_ops dsa_debugfs_vlan_ops = {
 	.read = dsa_debugfs_vlan_read,
 };
 
+static int dsa_debugfs_regs_read(struct dsa_switch *ds, int id,
+				 struct seq_file *seq)
+{
+	struct ethtool_regs regs;
+	u16 *data;
+	int count, i;
+
+	if (!(ds->ops->get_regs_len && ds->ops->get_regs))
+		return -EOPNOTSUPP;
+
+	count = ds->ops->get_regs_len(ds, id);
+	if (count < 0)
+		return count;
+
+	data = kcalloc(count, ETH_GSTRING_LEN, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	ds->ops->get_regs(ds, id, &regs, data);
+
+	for (i=0; i < count / 2; i++)
+		seq_printf(seq, "%02x: %04x\n", i, data[i]);
+
+	kfree(data);
+
+	return 0;
+}
+
+static const struct dsa_debugfs_ops dsa_debugfs_regs_ops = {
+	.read = dsa_debugfs_regs_read,
+};
+
 static int dsa_debugfs_create_symlink_link(struct dsa_switch *ds,
 					   struct dentry *dir, int port)
 {
@@ -471,6 +503,11 @@ static int dsa_debugfs_create_port(struct dsa_switch *ds, int port)
 
 	err = dsa_debugfs_create_file(ds, dir, "vlan", port,
 				      &dsa_debugfs_vlan_ops);
+	if (err)
+		return err;
+
+	err = dsa_debugfs_create_file(ds, dir, "regs", port,
+				      &dsa_debugfs_regs_ops);
 	if (err)
 		return err;
 
