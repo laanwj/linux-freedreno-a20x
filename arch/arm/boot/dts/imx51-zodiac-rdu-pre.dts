@@ -448,6 +448,24 @@
 		reg = <0x68>;
 	};
 
+	atmel_mxt_ts@4b {
+		compatible = "atmel,maxtouch";
+		reg = <0x4b>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <12 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts>;
+	};
+
+	atmel_mxt_ts@4c {
+		compatible = "atmel,maxtouch";
+		reg = <0x4c>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <12 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts>;
+	};
+
 	rmi-i2c-dev@20 {
 		compatible = "syna,rmi4-i2c";
 		reg = <0x20>;
