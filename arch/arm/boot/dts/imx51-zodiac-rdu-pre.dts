@@ -56,16 +56,31 @@
 				clock-frequency = <80000000>;
 				hactive = <1280>;
 				vactive = <768>;
-				hback-porch = <64>; /* 192 - 128 */
+				hback-porch = <192>;
 				hsync-len = <128>;
 				hfront-porch = <64>;
-				vback-porch = <13>; /* 20 - 7 */
+				vback-porch = <20>;
 				vsync-len = <7>;
 				vfront-porch = <3>;
 				pixelclk-active = <0>;
-				hsync-active = <1>;
-				vsync-active = <1>;
-				de-active = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+			};
+			chimei15 {
+				clock-frequency = <71000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <76>;
+				hsync-len = <33>;
+				hfront-porch = <51>;
+				vback-porch = <11>;
+				vsync-len = <10>;
+				vfront-porch = <2>;
+				pixelclk-active = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
 			};
 		};
 
