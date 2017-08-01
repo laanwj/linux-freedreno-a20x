@@ -686,7 +686,7 @@ kgsl_ringbuffer_init(gsl_device_t *device)
     status = kgsl_sharedmem_alloc0(device->id, flags, (rb->sizedwords << 2), &rb->buffer_desc);
 
     KGSL_DEBUG(GSL_DBGFLAGS_DUMPX, KGSL_DEBUG_DUMPX(BB_DUMP_RINGBUF_SET, (unsigned int)rb->buffer_desc.gpuaddr, (unsigned int)rb->buffer_desc.hostptr, 0, "kgsl_ringbuffer_init"));
-    printk(KERN_INFO "@MF@ %s: host=%08x gpu=%08x\n",  rb->buffer_desc.hostptr, rb->buffer_desc.gpuaddr);
+    printk(KERN_INFO "@MF@ %s: host=%08x gpu=%08x\n",  __func__, rb->buffer_desc.hostptr, rb->buffer_desc.gpuaddr);
 
     if (status != GSL_SUCCESS)
     {
