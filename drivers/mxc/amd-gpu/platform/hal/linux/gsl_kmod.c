@@ -1196,6 +1196,7 @@ static int gpu_probe(struct platform_device *pdev)
     struct resource *res;
     struct device *dev;
     struct mxc_gpu_platform_data *pdata;
+    int status;
 
     pdata = pdev->dev.platform_data;
     if (!pdata)
@@ -1271,8 +1272,9 @@ static int gpu_probe(struct platform_device *pdev)
 	}
     }
 
-    if (kgsl_driver_init() != GSL_SUCCESS) {
-	printk(KERN_ERR "%s: kgsl_driver_init error\n", __func__);
+    status = kgsl_driver_init();
+    if (status != GSL_SUCCESS) {
+	printk(KERN_ERR "%s: kgsl_driver_init error: %d\n", __func__, status);
 	goto kgsl_driver_init_error;
     }
     gsl_driver.osdep_dev = &pdev->dev;
