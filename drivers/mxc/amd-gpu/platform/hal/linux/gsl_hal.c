@@ -97,12 +97,14 @@ kgsl_hal_init(void)
     unsigned int va, pa;
 
     if (gsl_driver.hal) {
+	printk(KERN_ERR "%s: already initailized\n", __func__);
 	return GSL_FAILURE_ALREADYINITIALIZED;
     }
 
     gsl_driver.hal = (void *)kos_malloc(sizeof(gsl_hal_t));
 
     if (!gsl_driver.hal) {
+	printk(KERN_ERR "%s: could not allocate hal\n", __func__);
 	return GSL_FAILURE_OUTOFMEM;
     }
 
@@ -259,6 +261,7 @@ kgsl_hal_init(void)
 	printk(KERN_INFO "%s: hal->memspace[GSL_HAL_MEM1].sizebytes      = 0x%08x\n", __func__, hal->memspace[GSL_HAL_MEM1].sizebytes);
 #endif
     } else {
+	printk(KERN_ERR "%s: no memory could be allocated\n", __func__);
 	kgsl_hal_close();
 	return GSL_FAILURE_SYSTEMERROR;
     }
