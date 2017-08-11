@@ -29,8 +29,6 @@
 #include "gsl_ringbuffer.h"
 #include "gsl_drawctxt.h"
 
-extern bool debugfs_noisy;
-
 //////////////////////////////////////////////////////////////////////////////
 // functions
 //////////////////////////////////////////////////////////////////////////////
@@ -58,8 +56,9 @@ kgsl_yamato_gmeminit(gsl_device_t *device)
 
     device->ftbl.device_regwrite(device, mmRB_EDRAM_INFO, (unsigned int)rb_edram_info.val);
 
-    printk(KERN_INFO "@MF@ %s: gmem: size=%08x virt=%p phs=%08x gpu=%08x edram: size=%x mode=%x range=%x val=%x\n",
-    	    __func__,
+    if (debugfs_noisy)
+        printk(KERN_INFO "@MF@ %s: gmem: size=%08x virt=%p phs=%08x gpu=%08x edram: size=%x mode=%x range=%x val=%x\n",
+            __func__,
     	    device->gmemspace.sizebytes,
     	    device->gmemspace.mmio_virt_base,
     	    device->gmemspace.mmio_phys_base,

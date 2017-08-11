@@ -26,8 +26,6 @@
 #include <linux/hardirq.h>
 #include <linux/semaphore.h>
 
-extern bool debugfs_noisy;
-
 typedef struct _gsl_autogate_t {
     struct timer_list timer;
     spinlock_t lock;
