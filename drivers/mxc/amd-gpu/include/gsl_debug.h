@@ -37,6 +37,9 @@
 #include "gsl_tbdump.h"
 #endif
 
+#include <linux/types.h>
+
+extern bool debugfs_noisy;
 
 //////////////////////////////////////////////////////////////////////////////
 //  macros

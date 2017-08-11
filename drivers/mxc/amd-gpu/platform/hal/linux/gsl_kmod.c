@@ -516,7 +516,8 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
             }
 	    param.memdesc = &memdesc;
 
-            printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP gpuaddr=%08x ts=%d\n",
+	    if (debugfs_noisy)
+                printk(KERN_INFO "@MF@ IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP gpuaddr=%08x ts=%d\n",
             	    param.memdesc->gpuaddr,
             	    param.timestamp);
 
@@ -578,7 +579,8 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_context_create(param.device_id, param.type, &tmp, param.flags);
-            printk(KERN_INFO "@MF@ IOCTL_KGSL_CONTEXT_CREATE device=%d type=0x%x flags=0x%x\n",
+	    if (debugfs_noisy)
+                printk(KERN_INFO "@MF@ IOCTL_KGSL_CONTEXT_CREATE device=%d type=0x%x flags=0x%x\n",
             	    param.device_id, param.type, param.flags);
 
             if (kgslStatus == GSL_SUCCESS)
@@ -658,7 +660,8 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 }
                 else
                 {
-                    printk(KERN_INFO "@MF@  alloc %x flags=%x => gpu=%x\n", param.sizebytes, param.flags, tmp.gpuaddr);
+		    if (debugfs_noisy)
+                        printk(KERN_INFO "@MF@  alloc %x flags=%x => gpu=%x\n", param.sizebytes, param.flags, tmp.gpuaddr);
                     add_memblock_to_allocated_list(fd, &tmp);
                 }
 	    } else {
@@ -878,7 +881,8 @@ static int gsl_kmod_mmap(struct file *fd, struct vm_area_struct *vma)
     unsigned long addr = vma->vm_pgoff << PAGE_SHIFT;
     void *va = NULL;
 
-    printk(KERN_INFO "@MF@ %s(%08x size=%08x\n", __func__, addr, size);
+    if (debugfs_noisy)
+        printk(KERN_INFO "@MF@ %s(%08lx size=%08lx\n", __func__, addr, size);
 
     if (gsl_driver.enable_mmu && (addr < GSL_LINUX_MAP_RANGE_END) && (addr >= GSL_LINUX_MAP_RANGE_START)) {
 	va = gsl_linux_map_find(addr);
@@ -915,7 +919,8 @@ static int gsl_kmod_open(struct inode *inode, struct file *fd)
     struct gsl_kmod_per_fd_data *datp;
     int err = 0;
 
-    printk(KERN_INFO "@MF@ %s\n", __func__);
+    if (debugfs_noisy)
+        printk(KERN_INFO "@MF@ %s\n", __func__);
     if(mutex_lock_interruptible(&gsl_mutex))
     {
         return -EINTR;
@@ -1109,7 +1114,8 @@ static ssize_t gmem_read(struct file *file, char __user *user_buf,
 	unsigned long remain;
 	size_t i;
 
-	printk(KERN_INFO "@MF@ %s pos=%ld\n", __func__, (long)pos);
+	if (debugfs_noisy)
+	    printk(KERN_INFO "@MF@ %s pos=%ld\n", __func__, (long)pos);
 
 	if (pos < 0)
 		return -EINVAL;
