@@ -18,6 +18,7 @@ gpu-objs += 	common/gsl_cmdstream.o \
 		common/gsl_driver.o \
 		common/gsl_g12.o \
 		common/gsl_intrmgr.o \
+		common/gsl_log.o \
 		common/gsl_memmgr.o \
 		common/gsl_mmu.o \
 		common/gsl_ringbuffer.o \
