@@ -132,11 +132,12 @@
 
 	panel {
 		/* no compatible here, bootloader will patch in correct one */
+		compatible = "toshiba,lt089ac29000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_panel>;
 		power-supply = <&reg_3p3v>;
 		enable-gpios = <&gpio3 3 GPIO_ACTIVE_HIGH>;
-		status = "disabled";
+		status = "okay";
 
 		port {
 			panel_in: endpoint {
