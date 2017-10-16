@@ -136,7 +136,7 @@ static const DECLARE_TLV_DB_RANGE(tpa6130_tlv,
 );
 
 static const struct snd_kcontrol_new tpa6130a2_controls[] = {
-	SOC_SINGLE_TLV("Headphone Playback Volume",
+	SOC_SINGLE_TLV("TPA6130A2 Headphone Playback Volume",
 		       TPA6130A2_REG_VOL_MUTE, 0, 0x3f, 0,
 		       tpa6130_tlv),
 };
@@ -148,7 +148,7 @@ static const DECLARE_TLV_DB_RANGE(tpa6140_tlv,
 );
 
 static const struct snd_kcontrol_new tpa6140a2_controls[] = {
-	SOC_SINGLE_TLV("Headphone Playback Volume",
+	SOC_SINGLE_TLV("TPA6140A2 Headphone Playback Volume",
 		       TPA6130A2_REG_VOL_MUTE, 1, 0x1f, 0,
 		       tpa6140_tlv),
 };
