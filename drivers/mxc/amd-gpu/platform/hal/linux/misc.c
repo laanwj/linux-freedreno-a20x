@@ -93,9 +93,9 @@ int kgsl_device_active(gsl_device_t *dev)
 	return _kgsl_device_active(dev, 0);
 }
 
-static void kgsl_device_inactive(unsigned long data)
+static void kgsl_device_inactive(struct timer_list *t)
 {
-	gsl_autogate_t *autogate = (gsl_autogate_t *)data;
+	gsl_autogate_t *autogate = from_timer(autogate, t, timer);
 	unsigned long flags;
 
 	printk(KERN_ERR "%s:%d id %d active %d\n", __func__, __LINE__, autogate->dev->id, autogate->active);
@@ -120,7 +120,7 @@ int kgsl_device_clock(gsl_deviceid_t id, int enable)
 		if (enable)
 			kgsl_device_active(device);
 		else
-			kgsl_device_inactive((unsigned long)device);
+			kgsl_device_inactive(&((gsl_autogate_t *)device->autogate)->timer);
 	} else {
 		printk(KERN_ERR "%s: Dev %d clock is already off!\n", __func__, id);
 		ret = GSL_FAILURE;
@@ -144,10 +144,8 @@ int kgsl_device_autogate_init(gsl_device_t *dev)
 	autogate->active = 1;
 	spin_lock_init(&autogate->lock);
 	autogate->timeout = KGSL_DEVICE_IDLE_TIMEOUT;
-	init_timer(&autogate->timer);
+	timer_setup(&autogate->timer, kgsl_device_inactive, 0);
 	autogate->timer.expires = jiffies + msecs_to_jiffies(autogate->timeout);
-	autogate->timer.function = kgsl_device_inactive;
-	autogate->timer.data = (unsigned long)autogate;
 	add_timer(&autogate->timer);
 	INIT_WORK(&autogate->dis_task, clk_disable_task);
 	dev->autogate = autogate;
