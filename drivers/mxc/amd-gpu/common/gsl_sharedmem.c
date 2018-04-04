@@ -910,24 +910,6 @@ kgsl_sharedmem_convertaddr(unsigned int addr, int type)
 
 //----------------------------------------------------------------------------
 
-// HACK for use by KGSL2CMA
-// current implementaton only works for non-MMUed GPU addresses, and assumes
-// buffer will be contiguous.
-unsigned int
-kgsl_sharedmem_export(unsigned int handle, dma_addr_t *paddr_out, void **vaddr_out)
-{
-	unsigned int vaddr = kgsl_sharedmem_convertaddr(handle, 0); // gpu to host
-	if (!vaddr) {
-		printk("kgsl_sharedmem_export: Failed to lookup handle %08x\n", handle);
-		return -ENXIO;
-	}
-	*paddr_out = handle; // breaks with MMU
-	*vaddr_out = (void*)vaddr; // yuck
-	return 0;
-}
-
-//----------------------------------------------------------------------------
-
 KGSL_API int
 kgsl_sharedmem_cacheoperation(const gsl_memdesc_t *memdesc, unsigned int offsetbytes, unsigned int sizebytes, unsigned int operation)
 {
