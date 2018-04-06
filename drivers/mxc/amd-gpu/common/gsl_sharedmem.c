@@ -19,6 +19,9 @@
 #include "gsl.h"
 #include "gsl_hal.h"
 
+#include <linux/dma-direction.h>
+#include <linux/dma-buf.h>
+
 /////////////////////////////////////////////////////////////////////////////
 // macros
 //////////////////////////////////////////////////////////////////////////////
@@ -941,3 +944,58 @@ kgsl_sharedmem_fromhostpointer(gsl_deviceid_t device_id, gsl_memdesc_t *memdesc,
 
     return (status);
 }
+
+
+KGSL_API int
+kgsl_sharedmem_map_dmabuf(gsl_deviceid_t device_id, gsl_memdesc_t *memdesc, int fd)
+{
+    struct dma_buf *buf;
+    struct dma_buf_attachment *attach;
+    struct sg_table *sgt;
+    struct device *dev = gsl_driver.osdep_dev;
+
+    printk("%s: Mapping dmabuf %d\n", __func__, fd);
+
+    buf = dma_buf_get(fd);
+    if (IS_ERR(buf)) {
+        printk("%s: Could not get dmabuf\n", __func__);
+        return GSL_FAILURE;
+    }
+
+    attach = dma_buf_attach(buf, dev);
+    if (IS_ERR(attach)) {
+        dma_buf_put(buf);
+        printk("%s: Could not attach dmabuf\n", __func__);
+        return GSL_FAILURE;
+    }
+
+    sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+    if (IS_ERR(sgt)) {
+        dma_buf_detach(buf, attach);
+        dma_buf_put(buf);
+        printk("%s: Could not map dmabuf attachment\n", __func__);
+        return GSL_FAILURE;
+    }
+
+    if (sgt->nents > 1) {
+        printk("%s: dma_buf_map_attachment() returned an (unsupported) scattered list\n", __func__);
+        return GSL_FAILURE;
+    }
+    if (sg_dma_len(sgt->sgl) < buf->size) {
+        printk("%s: dma_buf_map_attachment() returned a small buffer\n", __func__);
+        return GSL_FAILURE;
+    }
+
+    /* TODO map through kgsl_sharedmem_map when MMU enabled */
+    memdesc->gpuaddr = sg_dma_address(sgt->sgl);
+    memdesc->hostptr = 0; /* ? */
+    printk("%s: mapped to dma address %08x\n", __func__, memdesc->gpuaddr);
+
+    /* TODO do this when the resource is freed! */
+    dma_buf_unmap_attachment(attach, sgt, DMA_BIDIRECTIONAL);
+    dma_buf_detach(buf, attach);
+    dma_buf_put(buf);
+
+    return GSL_SUCCESS;
+}
+

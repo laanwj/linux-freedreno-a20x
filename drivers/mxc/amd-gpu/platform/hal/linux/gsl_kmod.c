@@ -46,6 +46,8 @@
 #include <linux/debugfs.h>
 #include <linux/io.h>
 
+#include <drm/drm.h>
+
 #include "mxc_gpu.h"
 
 int gpu_2d_irq, gpu_3d_irq;
@@ -861,6 +863,26 @@ static long gsl_kmod_ioctl(struct file *fd, unsigned int cmd, unsigned long arg)
                 break;
             }
             kgslStatus = kgsl_device_clock(param.device, param.enable);
+            break;
+        }
+    case DRM_IOCTL_PRIME_FD_TO_HANDLE:
+        {
+            struct drm_prime_handle param;
+            gsl_memdesc_t memdesc;
+            if (copy_from_user(&param, (void __user *)arg, sizeof(struct drm_prime_handle)))
+            {
+                printk(KERN_ERR "%s: copy_from_user error\n", __func__);
+                kgslStatus = GSL_FAILURE;
+                break;
+            }
+            kgslStatus = kgsl_sharedmem_map_dmabuf(GSL_DEVICE_ANY, &memdesc, param.fd);
+            param.handle = memdesc.gpuaddr;
+            if (copy_to_user((void __user *)arg, &param, sizeof(struct drm_prime_handle)))
+            {
+                printk(KERN_ERR "%s: copy_to_user error\n", __func__);
+                kgslStatus = GSL_FAILURE;
+                break;
+            }
             break;
         }
     default:

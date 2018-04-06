@@ -115,6 +115,7 @@ KGSL_API int                kgsl_sharedmem_unmap(gsl_memdesc_t *memdesc);
 KGSL_API int                kgsl_sharedmem_getmap(const gsl_memdesc_t *memdesc, gsl_scatterlist_t *scatterlist);
 KGSL_API int                kgsl_sharedmem_cacheoperation(const gsl_memdesc_t *memdesc, unsigned int offsetbytes, unsigned int sizebytes, unsigned int operation);
 KGSL_API int                kgsl_sharedmem_fromhostpointer(gsl_deviceid_t device_id, gsl_memdesc_t *memdesc, void* hostptr);
+KGSL_API int                kgsl_sharedmem_map_dmabuf(gsl_deviceid_t device_id, gsl_memdesc_t *memdesc, int fd);
 
 
 ////////////////////////////////////////////////////////////////////////////
